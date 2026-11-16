@@ -18,16 +18,6 @@ export default class BetterBlockquoteEditing extends Plugin {
 				return true;
 			},
 		});
-		this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, context) => {
-			if (context instanceof MarkdownView && context.getMode() !== "source") return;
-			const target = this.getTarget(editor);
-			if (!target) return;
-			menu.addItem((item) => item.setTitle("引用・calloutをその場で編集")
-				.setIcon("text-quote").onClick(() => {
-					const latest = this.getTarget(editor);
-					if (latest) openInlineEditor(this.app, latest.cm, latest.quote);
-				}));
-		}));
 	}
 
 	private getTarget(editor: Editor) {
