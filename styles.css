@@ -7,6 +7,17 @@
 	padding-inline-end: var(--size-4-6);
 }
 
+.markdown-source-view.is-live-preview .cm-callout .callout-title > .callout-icon,
+.bbe-callout > .callout-title > .callout-icon[role="button"] {
+	cursor: pointer;
+}
+
+.bbe-callout > .callout-title > .callout-icon[role="button"]:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-s);
+}
+
 .bbe-title-host {
 	display: none;
 	min-width: 0;

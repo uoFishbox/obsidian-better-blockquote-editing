@@ -7,6 +7,7 @@ import { bodyOffsetToSource, calloutTitle, findQuote, serializeQuote, sourceOffs
 import { mergePendingText, textChanges } from "./sync";
 import { editingField, mirroredUpdate, sourceUpdate, stopEditing, syncConflict, syncEditing, type ExitDirection } from "./editing-state";
 import { NativeQuoteEditor } from "./native-editor";
+import { CalloutTypeModal, changeCalloutType } from "./callout-type-modal";
 
 /** Keep the same native editor and its history while mirroring text into the note. */
 export class QuoteEditorWidget extends WidgetType {
@@ -33,6 +34,7 @@ export class QuoteEditorWidget extends WidgetType {
 	private pendingTitle: ChangeSet;
 	private titleView?: EditorView;
 	private titleHost?: HTMLElement;
+	private typeModal?: CalloutTypeModal;
 
 	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension) {
 		super();
@@ -110,6 +112,25 @@ export class QuoteEditorWidget extends WidgetType {
 			this.titleHost = undefined;
 			return;
 		}
+		const icon = row.querySelector<HTMLElement>(".callout-icon");
+		if (icon) {
+			icon.setAttribute("role", "button");
+			icon.tabIndex = 0;
+			icon.setAttribute("aria-label", "Calloutのタイプを変更");
+			icon.setAttribute("title", "Calloutのタイプを変更");
+			icon.addEventListener("pointerdown", event => { event.preventDefault(); event.stopPropagation(); });
+			icon.addEventListener("click", event => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.openTypeModal();
+			});
+			icon.addEventListener("keydown", event => {
+				if (event.key !== "Enter" && event.key !== " ") return;
+				event.preventDefault();
+				event.stopPropagation();
+				this.openTypeModal();
+			});
+		}
 		preview.addEventListener("click", event => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -160,6 +181,28 @@ export class QuoteEditorWidget extends WidgetType {
 		}
 		row.append(this.titleHost);
 		row.toggleClass("bbe-editing-title", !!this.titleView?.hasFocus);
+	}
+
+	private openTypeModal(): void {
+		if (this.typeModal || this.isComposing() || !this.flush() || !this.quote.header) return;
+		const type = /^\[!([^|\]]+)/.exec(this.quote.header)?.[1];
+		if (!type) return;
+		const titleFocused = !!this.titleView?.hasFocus;
+		this.typeModal = new CalloutTypeModal(this.app, type, next => {
+			// Re-read the source after the modal closes; the note may have changed meanwhile.
+			if (this.isComposing() || !this.flush()) return;
+			const current = this.parent.state.field(editingField, false);
+			if (!current || current.widget !== this || !this.quote.header) return;
+			changeCalloutType(this.parent, current.from, next);
+		}, () => {
+			this.typeModal = undefined;
+			queueMicrotask(() => {
+				if (this.disposed || !this.root?.isConnected) return;
+				if (titleFocused && this.titleView) this.focusTitle();
+				else for (const editor of this.mounts.values()) editor.focus();
+			});
+		});
+		this.typeModal.open();
 	}
 
 	private focusTitle(offset?: number): void {
@@ -356,7 +399,8 @@ export class QuoteEditorWidget extends WidgetType {
 		}
 		const source = this.parent.state.sliceDoc(current.from, current.to);
 		const changed = source !== this.lastSource;
-		const quote = changed ? findQuote(this.parent.state.doc.toString(), current.from, true) : this.quote;
+		// Markdown's syntax node starts at >, after any indentation on the first line.
+		const quote = changed ? findQuote(this.parent.state.doc.toString(), current.from + Math.max(0, source.indexOf(">")), true) : this.quote;
 		if (!quote) return false;
 		const remoteTitle = changed ? calloutTitle(quote.header).text : this.syncedTitle;
 		const bodyMerge = mergePendingText(this.syncedBody, this.body, this.pendingChanges, changed ? quote.body : this.syncedBody);
@@ -573,6 +617,7 @@ export class QuoteEditorWidget extends WidgetType {
 
 	dispose(): void {
 		this.disposed = true;
+		this.typeModal?.close();
 		for (const editor of this.mounts.values()) editor.unload();
 		this.mounts.clear();
 		this.titleView?.destroy();
