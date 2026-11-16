@@ -1,31 +1,33 @@
 # Better Blockquote Editing
 
-Obsidianのcallout・引用を、標準のMarkdownエディタでその場で編集するプラグインです。外側の `>` を意識せず、テーマの装飾を保ったまま本文やタイトルを編集できます。
+English | [日本語](README.ja.md)
 
-Obsidian 1.14.4以降のLive Previewに対応しています。
+Edit Obsidian callouts and blockquotes inline with the native Markdown editor. Edit their content and titles without worrying about the outer `>` markers, while preserving your theme's styling.
 
-## 使い方
+Supports Live Preview in Obsidian 1.14.4 and later.
 
-1. [BRAT](https://github.com/TfTHacker/obsidian42-brat)プラグインに `https://github.com/uoFishbox/obsidian-better-blockquote-editing` を登録し、インストール後有効化してください。
-2. Live Previewでcallout・引用内にカーソルを移動するとエディタが開きます。calloutの本文やタイトルのクリック／タップでも開き、クリックした位置にキャレットを移動します。
-3. 通常のMarkdownと同じように編集できます。
-4. **Esc**、**Ctrl+Enter**（**Cmd+Enter**）、右上の閉じるアイコンをクリックするか、矢印キーでエディタ外にキャレットを移動すると編集を終了します。
+## Usage
 
-- calloutのタイトルもObsidian標準のMarkdownエディタでその場で編集でき、リンク補完や書式コマンドを利用できます。入れ子のcallout・引用にも対応しています。
-- calloutの左上アイコンをクリックすると、タイプを選ぶモーダルが開きます。標準タイプ・別名を検索でき、カスタムタイプ名も入力できます。
-- 矢印キーで本文・タイトル間やブロックの外へ移動できます。タイトルで **Enter** を押すと本文へ移動します。
-- 別のcalloutの本文・タイトルをクリックすると、編集中の内容を同期してから切り替わります。同期停止中やIME変換中は、現在の編集を維持します。
+1. Add `https://github.com/uoFishbox/obsidian-better-blockquote-editing` to the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin, then install and enable the plugin.
+2. In Live Preview, move the cursor into a callout or blockquote to open the inline editor. You can also click or tap a callout's content or title to open the editor and place the caret at that position.
+3. Edit as you would in a regular Markdown document.
+4. Finish editing by pressing **Esc** or **Ctrl+Enter** (**Cmd+Enter** on macOS), clicking the close icon in the upper-right corner, or using the arrow keys to move the caret outside the editor.
 
-## 注意点
+- Edit callout titles inline with Obsidian's native Markdown editor, including link completion and formatting commands. Nested callouts and blockquotes are also supported.
+- Click the icon in the upper-left corner of a callout to open the type picker. Search built-in types and aliases, or enter a custom type name.
+- Use the arrow keys to move between the content and title or out of the block. Press **Enter** in the title to move to the content.
+- Click another callout's content or title to sync your current edits and switch to it. If syncing is paused or an IME composition is in progress, the current editor stays open.
 
-- Source mode、Reading view、リスト項目内の引用は対象外です。
-- 折りたたみ指定はSource modeで変更してください。
-- **何らかの問題が生じて同期停止が表示された場合、未反映の内容は元ノートに保存されません。表示されたモーダルから本文をコピーしてから閉じてください。**
-- 他プラグインとの完全な互換性は保証できません。
+## Limitations
 
-## 開発
+- Source mode, Reading view, and blockquotes inside list items are not supported.
+- Change callout folding markers in Source mode.
+- **If a problem occurs and syncing is paused, any unsynced content will not be saved to the original note. Copy the content from the modal that appears before closing it.**
+- Full compatibility with other plugins is not guaranteed.
 
-Node.js 22以降を使用してください。
+## Development
+
+Use Node.js 22 or later.
 
 ```sh
 npm ci
@@ -33,9 +35,9 @@ npm test
 npm run build
 ```
 
-開発中の自動ビルドは `npm run dev` で起動します。
+Run `npm run dev` to rebuild automatically during development.
 
-Obsidian CLIが使える環境では、プラグインを有効にして実機テストを実行できます。
+If the Obsidian CLI is available, enable the plugin and run the tests inside Obsidian:
 
 ```sh
 npm run test:obsidian -- <vault-name>
