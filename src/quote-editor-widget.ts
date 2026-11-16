@@ -292,7 +292,6 @@ export class QuoteEditorWidget extends WidgetType {
 			const component = new NativeQuoteEditor({
 				app: this.app, containerEl: host, value: this.body,
 				cursorLocation: { anchor: this.quote.cursor, head: this.quote.cursor },
-				placeholder: "Markdownを入力…",
 				onChange: (update, editor) => {
 					this.body = editor.value;
 					if (!this.mounted || update.transactions.every(transaction => transaction.annotation(sourceUpdate))) return;
