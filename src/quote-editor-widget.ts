@@ -519,7 +519,7 @@ export class QuoteEditorWidget extends WidgetType {
 		return undefined;
 	}
 
-	private flush(): boolean {
+	flush(): boolean {
 		if (this.titleView?.compositionStarted) return false;
 		for (const editor of this.mounts.values()) {
 			if (editor.editorView.compositionStarted) return false;
@@ -614,6 +614,7 @@ export class QuoteEditorWidget extends WidgetType {
 	}
 
 	dispose(): void {
+		if (this.disposed) return;
 		this.disposed = true;
 		this.typeModal?.close();
 		for (const editor of this.mounts.values()) editor.unload();

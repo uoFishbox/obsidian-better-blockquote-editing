@@ -1,12 +1,13 @@
 import { Prec, type EditorSelection, type Extension } from "@codemirror/state";
 import { isolateHistory } from "@codemirror/commands";
 import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
-import { App, editorLivePreviewField, Notice } from "obsidian";
+import { App, editorLivePreviewField } from "obsidian";
 import { bodyOffsetToSource, calloutTitle, findQuote, titleOffsetToSource, type QuoteBlock } from "./quote";
 import { editingField, mirroredUpdate, startEditing, stopEditing } from "./editing-state";
 import { QuoteEditorWidget } from "./quote-editor-widget";
 import { CalloutTypeModal, changeCalloutType } from "./callout-type-modal";
 import type { BetterBlockquoteSettings } from "./settings";
+import { textChanges } from "./sync";
 
 export function createInlineEditorExtension(app: App, settings: BetterBlockquoteSettings): Extension {
 	const backspace = (view: EditorView, deleteBlock = false): boolean => {
@@ -64,14 +65,15 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					const inserted = insertedSelection?.eq(view.state.selection) === true;
 					insertedSelection = undefined;
 					const head = selection.head;
-					if (editing) {
+					if (editing && selection.from >= editing.from && selection.to <= editing.to) return;
+					const quote = findQuote(view.state.doc.toString(), selection.empty ? head : selection.to - 1, true);
+					if (editing && (!quote || quote.from === editing.from)) {
 						if (selection.empty && (head < editing.from || head > editing.to)) {
 							editing.widget.finish(head < editing.from ? -1 : 1, true);
 						}
 						return;
 					}
-					if (dismissed || view.state.readOnly || editing !== null) return;
-					const quote = findQuote(view.state.doc.toString(), selection.empty ? head : selection.to - 1, true);
+					if (dismissed || view.state.readOnly || editing === undefined) return;
 					if (!selection.empty) {
 						// Insert callout selects its new type; clicking a rendered body selects the whole block backward.
 						if (!quote?.header || !inserted && (head !== quote.from || selection.anchor !== quote.to)) return;
@@ -105,7 +107,6 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 				const block = target.closest<HTMLElement>(".cm-callout");
 				if (!block) return null;
 				const typeIcon = target.closest(".callout-title > .callout-icon");
-				if (!typeIcon && view.state.field(editingField, false)) return null;
 				const editButton = target.closest(".edit-block-button");
 				const control = target.closest("a, button, input, textarea, select, [contenteditable=true]");
 				if (!typeIcon && !editButton && ((control && block.contains(control)) ||
@@ -193,7 +194,9 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 				const quote = findQuote(view.state.doc.toString(), view.posAtDOM(target.block), true);
 				if (!quote) return;
 				const selection = view.state.selection;
-				if (!target.editButton && (selection.ranges.length !== 1 || !selection.main.empty &&
+				const editing = view.state.field(editingField, false);
+				const inActiveEditor = editing && selection.ranges.every(range => range.from >= editing.from && range.to <= editing.to);
+				if (!target.editButton && !inActiveEditor && (selection.ranges.length !== 1 || !selection.main.empty &&
 					(selection.main.head !== quote.from || selection.main.anchor !== quote.to))) return;
 				quote.cursor = 0;
 				quote.titleCursor = target.title ? calloutTitle(quote.header).text.length : null;
@@ -271,14 +274,26 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 }
 
 export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, settings: BetterBlockquoteSettings, selectTitleOnOpen = false): void {
-	if (view.state.field(editorLivePreviewField, false) !== true) return;
-	if (view.state.field(editingField, false)) {
-		new Notice("このエディタで開いている引用の編集を、先に閉じてください。");
-		return;
+	if (view.state.readOnly || view.compositionStarted || view.state.field(editorLivePreviewField, false) !== true) return;
+	const editing = view.state.field(editingField, false);
+	if (editing) {
+		if (quote.from === editing.from) return;
+		const before = view.state.doc.toString();
+		if (!editing.widget.flush()) return;
+		// Flushing the old editor (including nested drafts) may move the target.
+		const source = view.state.doc.toString();
+		const at = textChanges(before, source).mapPos(quote.from + Math.max(0, quote.source.indexOf(">")), 1);
+		const current = findQuote(source, at, true);
+		if (!current) return;
+		current.cursor = Math.min(quote.cursor, current.body.length);
+		current.titleCursor = quote.titleCursor === null ? null : Math.min(quote.titleCursor, calloutTitle(current.header).text.length);
+		quote = current;
 	}
 	// The widget owns rendering; the source keeps the actual body caret.
 	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app, settings), selectTitleOnOpen)),
 		selection: { anchor: quote.from + (quote.titleCursor !== null ? titleOffsetToSource(quote, quote.source, quote.titleCursor) :
 			bodyOffsetToSource(quote, quote.source, quote.cursor)) },
 		annotations: isolateHistory.of("before"), scrollIntoView: true });
+	// Offscreen widgets retain their editors until explicitly disposed.
+	editing?.widget.dispose();
 }
