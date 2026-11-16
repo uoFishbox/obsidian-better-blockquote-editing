@@ -6,11 +6,11 @@ import { findQuote } from "./quote";
 import { BetterBlockquoteSettingTab, type BetterBlockquoteSettings } from "./settings";
 
 export default class BetterBlockquoteEditing extends Plugin {
-	settings: BetterBlockquoteSettings = { backspaceBehavior: "delete", ctrlBackspaceDeletesBlock: true };
+	settings: BetterBlockquoteSettings = { backspaceBehavior: "edit", ctrlBackspaceDeletesBlock: true };
 
 	async onload(): Promise<void> {
 		const data = await this.loadData() as Partial<BetterBlockquoteSettings> | null;
-		this.settings.backspaceBehavior = data?.backspaceBehavior === "edit" ? "edit" : "delete";
+		this.settings.backspaceBehavior = data?.backspaceBehavior === "delete" ? "delete" : "edit";
 		this.settings.ctrlBackspaceDeletesBlock = data?.ctrlBackspaceDeletesBlock !== false;
 		this.addSettingTab(new BetterBlockquoteSettingTab(this));
 		this.registerEditorExtension(createInlineEditorExtension(this.app, this.settings));
