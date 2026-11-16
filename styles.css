@@ -152,6 +152,11 @@
 	padding: 0;
 }
 
+/* Override Minimal's readable line margins only inside embedded editors. */
+.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content > div {
+	margin-inline: 0 !important;
+}
+
 .bbe-status {
 	margin-block: var(--size-4-2);
 	font-family: var(--font-interface);
