@@ -99,7 +99,8 @@
 		const current = app.plugins.plugins[id];
 		current.settings.backspaceBehavior = originalBehavior;
 		await current.saveData(originalData);
-		await leaf.view.save(); leaf.detach(); await pause();
+		if (typeof leaf.view.save === "function") await leaf.view.save();
+		leaf.detach(); await pause();
 		if (app.vault.getAbstractFileByPath(file.path) === file) await app.vault.delete(file);
 		if (originalLeaf) app.workspace.setActiveLeaf(originalLeaf, { focus: true });
 	}

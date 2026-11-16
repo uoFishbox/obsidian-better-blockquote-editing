@@ -9,6 +9,7 @@
 	try {
 		require("electron").remote.getCurrentWindow().focus();
 		await leaf.openFile(file, { state: { mode: "source", source: false } });
+		app.workspace.setActiveLeaf(leaf, { focus: true });
 		await pause(250);
 		const cm = leaf.view.editor.cm;
 		const root = () => cm.dom.querySelector(".bbe-inline-editor");

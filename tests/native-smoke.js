@@ -27,15 +27,13 @@
 			}));
 		};
 		const open = async (needle = "body") => {
+			editor.setCursor({ line: 0, ch: 0 });
 			editor.setCursor(editor.offsetToPos(editor.getValue().indexOf(needle)));
 			app.workspace.setActiveLeaf(leaf, { focus: true });
 			editor.focus();
 			await pause();
 			// Windows can deny foreground activation by background CLI processes.
 			app.workspace.activeEditor = view;
-			const command = app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"];
-			if (!root()) assert(command.editorCheckCallback(false, editor, view), "editor command unavailable for fixture");
-			await pause();
 			assert(root(), "inline editor missing: " + JSON.stringify({passed, cursor:editor.getCursor(),
 				text:editor.getValue().slice(0,200),target:!!app.plugins.plugins["obsidian-better-blockquote-editing"].getTarget(editor),
 				state:cm.state.values.filter(value=>value&&typeof value==="object"&&"widget" in value)
@@ -104,11 +102,9 @@
 				cm.focus();
 				await pause();
 				assert(!root(), "refocusing after close reopened the editor without a caret move");
-				const command = app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"];
-				cm.dispatch({ selection: { anchor: at } });
-				assert(command.editorCheckCallback(false, editor, view), "explicit command failed after auto-open was dismissed");
+				cm.dispatch({ selection: { anchor: at + 1 } });
 				await pause();
-				assert(root(), "explicit command did not reopen the editor");
+				assert(root(), "moving the caret after close did not reopen the editor");
 				await close();
 				cm.dispatch({ selection: { anchor: 0 } });
 				cm.dispatch({ selection: { anchor: at, head: at + 1 } });
