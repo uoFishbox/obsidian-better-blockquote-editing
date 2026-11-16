@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-better-blockquote-editing",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Inline native Markdown editing for Obsidian callouts and blockquotes",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -11,7 +11,13 @@
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
+	"engines": { "node": ">=22" },
 	"devDependencies": {
+		"@codemirror/commands": "^6.11.1",
+		"@codemirror/language": "^6.13.1",
+		"@codemirror/state": "^6.7.6",
+		"@codemirror/view": "^6.43.13",
+		"@lezer/common": "^1.5.5",
 		"@types/node": "^22.5.4",
 		"@typescript-eslint/eslint-plugin": "^8.4.0",
 		"@typescript-eslint/parser": "^8.4.0",
@@ -21,5 +27,9 @@
 		"obsidian-typings": "latest",
 		"tslib": "^2.6.3",
 		"typescript": "5.7.2"
+	},
+	"dependencies": {
+		"@lezer/markdown": "1.8.1",
+		"@mnaoumov/obsidian-lib": "11.0.0"
 	}
 }
