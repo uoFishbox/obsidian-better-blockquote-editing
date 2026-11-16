@@ -1,8 +1,149 @@
-/*
+.bbe-inline-editor {
+	position: relative;
+	white-space: normal;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.bbe-callout > .callout-title {
+	padding-inline-end: var(--size-4-6);
+}
 
-If your plugin does not need CSS, delete this file.
+.bbe-title-host {
+	display: none;
+	min-width: 0;
+	flex: 1;
+	cursor: text;
+}
 
-*/
+.bbe-callout > .callout-title > .callout-title-inner {
+	cursor: text;
+}
+
+.bbe-editing-title > .callout-title-inner {
+	display: none;
+}
+
+.bbe-editing-title > .bbe-title-host {
+	display: block;
+}
+
+.bbe-title-host .cm-editor,
+.bbe-title-host .cm-scroller,
+.bbe-title-host .cm-content {
+	font: inherit;
+	color: inherit;
+	background: transparent;
+	padding: 0;
+	min-height: 0;
+}
+
+.bbe-title-host .cm-editor.cm-focused {
+	outline: none;
+}
+
+.bbe-title-host .cm-scroller {
+	overflow: visible;
+}
+
+.bbe-inline-editor .bbe-title-host > .cm-editor > .cm-scroller {
+	/* Override the surrounding note editor's line height with the callout title's. */
+	line-height: inherit;
+}
+
+.bbe-title-host .cm-line {
+	padding: 0;
+}
+
+.bbe-title-host .cm-placeholder {
+	color: inherit;
+	opacity: 0.6;
+}
+
+.bbe-callout > .callout-content {
+	/* The outer note scrolls; editor overlays must not create an inner scrollbar. */
+	overflow: visible;
+}
+
+.bbe-close.clickable-icon {
+	position: absolute;
+	top: var(--size-4-2);
+	inset-inline-end: var(--size-4-2);
+	color: var(--text-muted);
+}
+
+.markdown-source-view.mod-cm6 .bbe-blockquote {
+	position: relative;
+	margin: 0;
+	padding: 0;
+	/* HyperMD-quote supplies the same rail, background and type as the note. */
+	padding-inline-start: 1em;
+	padding-inline-end: var(--size-4-8);
+}
+
+.bbe-blockquote > .bbe-editor-host {
+	margin-block: 0;
+}
+
+.bbe-blockquote > .bbe-editor-host > .markdown-source-view.mod-cm6 {
+	font-size: inherit;
+}
+
+/* Keep the resting quote free of controls without removing keyboard access. */
+.bbe-inline-editor:has(> .bbe-blockquote) > .bbe-close {
+	opacity: 0;
+}
+
+.bbe-inline-editor:has(> .bbe-blockquote):hover > .bbe-close,
+.bbe-inline-editor:has(> .bbe-blockquote) > .bbe-close:focus-visible {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.bbe-inline-editor:has(> .bbe-blockquote) > .bbe-close {
+		opacity: 1;
+	}
+}
+
+.bbe-editor-host {
+	min-width: 0;
+	margin-block: var(--p-spacing);
+}
+
+/* A note editor normally fills its pane. Here its content sets the height. */
+.bbe-editor-host > .markdown-source-view.mod-cm6,
+.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor {
+	height: auto;
+	min-height: 0;
+	background: transparent;
+}
+
+.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
+	height: auto;
+	min-height: 0;
+	padding: 0;
+	overflow: visible;
+	scrollbar-gutter: auto;
+}
+
+/* Override the phone layout's top spacing inside embedded editors. */
+.is-phone .mod-root .workspace-leaf-content .view-content .bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
+	padding-top: 0;
+}
+
+.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer {
+	min-height: 0 !important;
+	width: 100%;
+	max-width: none;
+	margin: 0;
+}
+
+.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content {
+	min-height: 1lh;
+	padding: 0;
+}
+
+.bbe-status {
+	margin-block: var(--size-4-2);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-error);
+}
