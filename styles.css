@@ -102,6 +102,9 @@
 
 /* Keep the resting quote free of controls without removing keyboard access. */
 .bbe-inline-editor:has(> .bbe-blockquote) > .bbe-close {
+	/* A single-line quote has no vertical padding for the callout button offset. */
+	top: 0;
+	max-height: 100%;
 	opacity: 0;
 }
 
