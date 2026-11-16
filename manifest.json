@@ -1,9 +1,10 @@
 {
     "author": "uoFishbox",
     "authorUrl": "https://obsidian.md",
-    "description": "Demonstrates some of the capabilities of the Obsidian API.",
-    "id": "sample-plugin",
+    "description": "Edit callouts and blockquotes inline with Obsidian's native Markdown editor, without outer quote markers.",
+    "id": "obsidian-better-blockquote-editing",
     "isDesktopOnly": false,
-    "name": "Sample Plugin",
+    "name": "Better Blockquote Editing",
+    "minAppVersion": "1.14.4",
     "version": "1.0.0"
 }
