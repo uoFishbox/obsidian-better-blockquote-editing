@@ -1,6 +1,6 @@
 import { ChangeSet, EditorSelection, EditorState, Transaction, type Extension } from "@codemirror/state";
-import { defaultKeymap, history, historyKeymap, isolateHistory } from "@codemirror/commands";
-import { EditorView, keymap, placeholder, WidgetType } from "@codemirror/view";
+import { isolateHistory } from "@codemirror/commands";
+import { EditorView, WidgetType } from "@codemirror/view";
 import type { EmbeddableMarkdownEditorComponent } from "@mnaoumov/obsidian-lib/components/embeddable-markdown-editor-component";
 import { App, Component, editorInfoField, editorLivePreviewField, MarkdownRenderer, Modal, Notice, setIcon, type TFile } from "obsidian";
 import { bodyOffsetToSource, calloutTitle, findQuote, serializeQuote, sourceOffsetToBody, titleOffsetToSource, withCalloutTitle, type QuoteBlock } from "./quote";
@@ -32,9 +32,11 @@ export class QuoteEditorWidget extends WidgetType {
 	private title: string;
 	private syncedTitle: string;
 	private pendingTitle: ChangeSet;
-	private titleView?: EditorView;
+	private titleEditor?: NativeQuoteEditor;
 	private titleHost?: HTMLElement;
 	private typeModal?: CalloutTypeModal;
+
+	private get titleView(): EditorView | undefined { return this.titleEditor?.editorView; }
 
 	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension,
 		private readonly selectTitleOnOpen = false) {
@@ -108,8 +110,8 @@ export class QuoteEditorWidget extends WidgetType {
 		const row = root.querySelector<HTMLElement>(":scope > .bbe-callout > .callout-title");
 		const preview = row?.querySelector<HTMLElement>(".callout-title-inner");
 		if (!row || !preview) {
-			this.titleView?.destroy();
-			this.titleView = undefined;
+			this.titleEditor?.unload();
+			this.titleEditor = undefined;
 			this.titleHost = undefined;
 			return;
 		}
@@ -140,45 +142,54 @@ export class QuoteEditorWidget extends WidgetType {
 		if (!this.titleHost) {
 			this.titleHost = root.ownerDocument.createElement("div");
 			this.titleHost.className = "callout-title-inner bbe-title-host";
-			this.titleView = new EditorView({
-				parent: this.titleHost,
-				root: this.parent.root as Document | ShadowRoot,
-				state: EditorState.create({ doc: this.title, extensions: [
-					history(), EditorView.lineWrapping,
-					EditorView.contentAttributes.of({ "aria-label": "Calloutのタイトル" }),
-					placeholder(preview.textContent ?? "タイトル"),
-					// A title is one Markdown line, including pasted text.
-					EditorState.transactionFilter.of(tr => tr.newDoc.lines > 1 ? [] : tr),
-					keymap.of([
-						{ key: "ArrowUp", run: view => this.moveFromTitle(view, -1, true) },
-						{ key: "ArrowLeft", run: view => this.moveFromTitle(view, -1, false) },
-						{ key: "ArrowDown", run: view => this.moveFromTitle(view, 1, true) },
-						{ key: "ArrowRight", run: view => this.moveFromTitle(view, 1, false) },
-						{ key: "Enter", run: view => { if (view.compositionStarted) return false; this.focusBody(0); return true; } },
-						{ key: "Escape", run: view => { if (view.compositionStarted) return false; this.finish(); return true; } },
-						{ key: "Mod-Enter", run: view => { if (view.compositionStarted) return false; this.finish(); return true; } },
-						...historyKeymap, ...defaultKeymap,
-					]),
-					EditorView.updateListener.of(update => {
-						this.title = update.state.doc.toString();
-						if (update.transactions.length && update.transactions.every(tr => tr.annotation(sourceUpdate))) return;
-						if (update.docChanged) {
-							this.pendingTitle = this.pendingTitle.compose(update.changes);
-							this.userEvent = update.transactions.map(tr => tr.annotation(Transaction.userEvent)).find(Boolean) ?? "input.better-blockquote";
-						}
-						if (update.docChanged || update.selectionSet || update.focusChanged) this.scheduleSync();
-						if (update.focusChanged && !update.view.hasFocus) {
-							queueMicrotask(() => {
-								if (this.disposed || this.titleView?.hasFocus) return;
-								this.titleHost?.parentElement?.removeClass("bbe-editing-title");
-								this.parent.requestMeasure();
-								void this.refreshShell();
-							});
-						}
-					}),
-					EditorView.domEventHandlers({ compositionend: () => { this.scheduleReceive(); this.scheduleSync(); } }),
-				] }),
-			});
+			row.append(this.titleHost);
+			let loaded = false;
+			const component = new NativeQuoteEditor({
+				app: this.app, containerEl: this.titleHost, value: this.title,
+				placeholder: preview.textContent ?? "タイトル",
+				onEnter: ({ isModifierPressed, component }) => {
+					if (component.editorView.compositionStarted) return false;
+					if (isModifierPressed) this.finish();
+					else this.focusBody(0);
+					return true;
+				},
+				onEscape: component => { if (!component.editorView.compositionStarted) this.finish(); },
+			}, (direction, vertical) => {
+				if (direction < 0) this.finish(-1, true);
+				else this.focusBody(vertical ? Math.min(this.titleView!.state.selection.main.head, this.body.split("\n", 1)[0]!.length) : 0);
+			}, this.sourceFile, () => this.scheduleSync(), [
+				// A title is one Markdown line, including pasted text.
+				EditorState.transactionFilter.of(tr => tr.newDoc.lines > 1 ? [] : tr),
+				EditorView.updateListener.of(update => {
+					// Native initialization sets the value before mounting is complete.
+					if (!loaded) return;
+					this.title = update.state.doc.toString();
+					if (update.transactions.length && update.transactions.every(tr => tr.annotation(sourceUpdate))) return;
+					if (update.docChanged) {
+						this.pendingTitle = this.pendingTitle.compose(update.changes);
+						this.userEvent = update.transactions.map(tr => tr.annotation(Transaction.userEvent)).find(Boolean) ?? "input.better-blockquote";
+					}
+					if (update.docChanged || update.selectionSet || update.focusChanged) this.scheduleSync();
+					if (update.focusChanged && !update.view.hasFocus) {
+						queueMicrotask(() => {
+							if (this.disposed || this.titleView?.hasFocus) return;
+							this.titleHost?.parentElement?.removeClass("bbe-editing-title");
+							this.parent.requestMeasure();
+							void this.refreshShell();
+						});
+					}
+				}),
+				EditorView.domEventHandlers({ compositionend: () => { this.scheduleReceive(); this.scheduleSync(); } }),
+			]);
+			try {
+				component.load();
+			} catch (error) {
+				component.unload();
+				throw error;
+			}
+			this.titleEditor = component;
+			loaded = true;
+			component.editorView.contentDOM.setAttribute("aria-label", "Calloutのタイトル");
 		}
 		row.append(this.titleHost);
 		row.toggleClass("bbe-editing-title", !!this.titleView?.hasFocus);
@@ -224,19 +235,6 @@ export class QuoteEditorWidget extends WidgetType {
 			editor.focus();
 		}
 		this.scheduleSync();
-	}
-
-	private moveFromTitle(view: EditorView, direction: ExitDirection, vertical: boolean): boolean {
-		const { main, ranges } = view.state.selection;
-		if (view.compositionStarted || !main.empty || ranges.length !== 1) return false;
-		const edge = direction < 0 ? 0 : view.state.doc.length;
-		if (vertical) {
-			const caret = view.coordsAtPos(main.head), end = view.coordsAtPos(edge);
-			if (!caret || !end || Math.abs(caret.top - end.top) > 1) return false;
-		} else if (main.head !== edge) return false;
-		if (direction < 0) this.finish(-1, true);
-		else this.focusBody(vertical ? Math.min(main.head, this.body.split("\n", 1)[0]!.length) : 0);
-		return true;
 	}
 
 	private mountEditor(root: HTMLElement): void {
@@ -624,8 +622,8 @@ export class QuoteEditorWidget extends WidgetType {
 		this.typeModal?.close();
 		for (const editor of this.mounts.values()) editor.unload();
 		this.mounts.clear();
-		this.titleView?.destroy();
-		this.titleView = undefined;
+		this.titleEditor?.unload();
+		this.titleEditor = undefined;
 		this.titleHost = undefined;
 		this.renderer.unload();
 		this.statuses.clear();

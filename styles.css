@@ -37,6 +37,7 @@
 	display: block;
 }
 
+.bbe-title-host > .markdown-source-view.mod-cm6,
 .bbe-title-host .cm-editor,
 .bbe-title-host .cm-scroller,
 .bbe-title-host .cm-content {
@@ -55,13 +56,14 @@
 	overflow: visible;
 }
 
-.bbe-inline-editor .bbe-title-host > .cm-editor > .cm-scroller {
+.bbe-inline-editor .bbe-title-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
 	/* Override the surrounding note editor's line height with the callout title's. */
 	line-height: inherit;
 }
 
 .bbe-title-host .cm-line {
 	padding: 0;
+	font-weight: inherit;
 }
 
 .bbe-title-host .cm-placeholder {
@@ -120,14 +122,14 @@
 }
 
 /* A note editor normally fills its pane. Here its content sets the height. */
-.bbe-editor-host > .markdown-source-view.mod-cm6,
-.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor {
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6,
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor {
 	height: auto;
 	min-height: 0;
 	background: transparent;
 }
 
-.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
 	height: auto;
 	min-height: 0;
 	padding: 0;
@@ -136,24 +138,24 @@
 }
 
 /* Override the phone layout's top spacing inside embedded editors. */
-.is-phone .mod-root .workspace-leaf-content .view-content .bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
+.is-phone .mod-root .workspace-leaf-content .view-content :is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
 	padding-top: 0;
 }
 
-.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer {
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer {
 	min-height: 0 !important;
 	width: 100%;
 	max-width: none;
 	margin: 0;
 }
 
-.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content {
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content {
 	min-height: 1lh;
 	padding: 0;
 }
 
 /* Override Minimal's readable line margins only inside embedded editors. */
-.bbe-editor-host > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content > div {
+:is(.bbe-editor-host, .bbe-title-host) > .markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller > .cm-sizer > .cm-contentContainer > .cm-content > div {
 	margin-inline: 0 !important;
 }
 

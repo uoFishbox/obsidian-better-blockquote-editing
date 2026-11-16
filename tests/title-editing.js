@@ -4,6 +4,7 @@
 	const assert = (ok, message) => { if (!ok) throw new Error(message); };
 	const originalLeaf = app.workspace.activeLeaf;
 	const file = await app.vault.create(`bbe-title-${Date.now()}.md`, "");
+	const target = await app.vault.create(`bbe-title-link-${Date.now()}.md`, "Link target");
 	const leaf = app.workspace.getLeaf("tab");
 	const passed = [];
 	try {
@@ -32,6 +33,15 @@
 		};
 		let { title, body } = await open();
 		assert(title.hasFocus && title.state.selection.main.head === 2, "entering the header did not focus the title caret");
+		assert(root().querySelector(".bbe-title-host > .markdown-source-view.mod-cm6 > .cm-editor") === title.dom,
+			"title is not an Obsidian native Markdown editor");
+		assert(app.workspace.activeEditor?.editor?.cm === title && app.workspace.activeEditor.file === file &&
+			app.workspace.activeEditor.editMode.clipboardManager.getPath() === file.path,
+			"title commands or clipboard manager lost the source file context");
+		assert(title.dom.getBoundingClientRect().height >= title.defaultLineHeight &&
+			getComputedStyle(title.scrollDOM).paddingTop === "0px" &&
+			getComputedStyle(title.scrollDOM).lineHeight === getComputedStyle(root().querySelector(".callout-title")).lineHeight,
+			"native title layout lost its height, spacing or callout typography");
 		title.dispatch({ changes: { from: 0, to: 5, insert: "日本語タイトル" }, selection: { anchor: 4 } });
 		await pause();
 		assert(editor.getValue() === text.replace("Title", "日本語タイトル"), "title editing changed the list, blank line or folding marker");
@@ -116,6 +126,35 @@
 		assert(editor.getValue().includes("> > [!tip] Nested title\n> > body"), "nested title did not synchronize through every ancestor");
 		passed.push("nested title navigation and synchronization through enclosing editors");
 
+		({ title, body } = await open("> [!note] Title\n> body"));
+		title.dispatch({ selection: { anchor: 0, head: title.state.doc.length } });
+		app.commands.executeCommandById("editor:toggle-bold"); await pause();
+		assert(title.state.doc.toString() === "**Title**" && editor.getValue() === "> [!note] **Title**\n> body" &&
+			title.dom.querySelector(".cm-strong"), "native title formatting command or Live Preview failed");
+		const owner = app.workspace.activeEditor;
+		owner.editor.undo(); await pause();
+		assert(title.state.doc.toString() === "Title" && editor.getValue() === "> [!note] Title\n> body",
+			"native title Undo failed");
+		title.dispatch({ changes: { from: 0, to: title.state.doc.length, insert: "[[" + target.basename },
+			selection: { anchor: target.basename.length + 2 }, userEvent: "input.type" });
+		const deadline = Date.now() + 4000;
+		while (owner.editMode.editorSuggest.currentSuggest?.context?.query !== target.basename && Date.now() < deadline) await pause();
+		const suggest = owner.editMode.editorSuggest.currentSuggest;
+		assert(suggest?.context?.query === target.basename && suggest.context.file === file && suggest.context.editor === owner.editor,
+			"native title link suggestions did not use the source file and editor");
+		const choices = await suggest.getSuggestions(suggest.context);
+		const choice = choices?.find(item => item.file === target);
+		assert(choice, "title link completion target missing");
+		press(title, "Enter"); await pause();
+		assert(title.hasFocus && title.state.doc.toString().includes(target.basename + "]]") &&
+			editor.getValue() === "> [!note] " + title.state.doc.toString() + "\n> body", "title link completion did not synchronize");
+		const singleLine = title.state.doc.toString();
+		const source = editor.getValue();
+		title.dispatch({ changes: { from: 0, insert: "first\nsecond" } }); await pause();
+		assert(title.state.doc.toString() === singleLine && editor.getValue() === source,
+			"multiline input corrupted the callout title");
+		passed.push("native title formatting, Live Preview, Undo, file-aware link completion and single-line input");
+
 		({ title, body } = await open());
 		title.contentDOM.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
 		title.dispatch({ changes: { from: 0, insert: "日本語" } });
@@ -137,6 +176,7 @@
 		if (typeof leaf.view.save === "function") await leaf.view.save();
 		leaf.detach(); await pause(300);
 		if (app.vault.getAbstractFileByPath(file.path) === file) await app.vault.delete(file);
+		if (app.vault.getAbstractFileByPath(target.path) === target) await app.vault.delete(target);
 		if (originalLeaf) app.workspace.setActiveLeaf(originalLeaf, { focus: true });
 	}
 })()
