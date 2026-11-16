@@ -90,7 +90,7 @@ export class QuoteEditorWidget extends WidgetType {
 		close.setAttribute("type", "button");
 		close.setAttribute("aria-label", "閉じる");
 		close.setAttribute("title", "編集を閉じる (Esc / Ctrl/Cmd+Enter)");
-		setIcon(close, "code-2");
+		setIcon(close, "x");
 		const status = body.createDiv({ cls: "bbe-status" });
 		status.setAttribute("role", "status");
 		this.statuses.add(status);
