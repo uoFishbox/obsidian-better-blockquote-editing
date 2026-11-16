@@ -93,7 +93,6 @@ export class QuoteEditorWidget extends WidgetType {
 		const close = root.createEl("button", { cls: "bbe-close clickable-icon" });
 		close.setAttribute("type", "button");
 		close.setAttribute("aria-label", "閉じる");
-		close.setAttribute("title", "編集を閉じる (Esc / Ctrl/Cmd+Enter)");
 		setIcon(close, "x");
 		const status = body.createDiv({ cls: "bbe-status" });
 		status.setAttribute("role", "status");
@@ -119,7 +118,6 @@ export class QuoteEditorWidget extends WidgetType {
 			icon.setAttribute("role", "button");
 			icon.tabIndex = 0;
 			icon.setAttribute("aria-label", "Calloutのタイプを変更");
-			icon.setAttribute("title", "Calloutのタイプを変更");
 			icon.addEventListener("pointerdown", event => { event.preventDefault(); event.stopPropagation(); });
 			icon.addEventListener("click", event => {
 				event.preventDefault();
