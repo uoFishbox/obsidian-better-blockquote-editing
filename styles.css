@@ -88,7 +88,7 @@
 	margin: 0;
 	padding: 0;
 	/* HyperMD-quote supplies the same rail, background and type as the note. */
-	padding-inline-start: 1em;
+	padding-inline-start: 14px;
 	padding-inline-end: var(--size-4-8);
 }
 
