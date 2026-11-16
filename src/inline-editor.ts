@@ -1,15 +1,46 @@
 import { Prec, type EditorSelection, type Extension } from "@codemirror/state";
 import { isolateHistory } from "@codemirror/commands";
-import { EditorView, ViewPlugin } from "@codemirror/view";
+import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
 import { App, editorLivePreviewField, Notice } from "obsidian";
 import { bodyOffsetToSource, calloutTitle, findQuote, titleOffsetToSource, type QuoteBlock } from "./quote";
 import { editingField, mirroredUpdate, startEditing, stopEditing } from "./editing-state";
 import { QuoteEditorWidget } from "./quote-editor-widget";
 import { CalloutTypeModal, changeCalloutType } from "./callout-type-modal";
+import type { BetterBlockquoteSettings } from "./settings";
 
-export function createInlineEditorExtension(app: App): Extension {
+export function createInlineEditorExtension(app: App, settings: BetterBlockquoteSettings): Extension {
+	const backspace = (view: EditorView, deleteBlock = false): boolean => {
+		if (deleteBlock && (settings.backspaceBehavior !== "edit" || !settings.ctrlBackspaceDeletesBlock)) return false;
+		const { state } = view;
+		const { main, ranges } = state.selection;
+		if (state.readOnly || view.compositionStarted || !main.empty || ranges.length !== 1 ||
+			state.field(editorLivePreviewField, false) !== true || state.field(editingField, false) ||
+			view.root.activeElement !== view.contentDOM) return false;
+		const line = state.doc.lineAt(main.head);
+		if (line.number === 1 || main.head !== line.from) return false;
+		const quote = findQuote(state.doc.toString(), main.head - 1, true);
+		if (!quote || quote.to !== main.head - 1) return false;
+		if (settings.backspaceBehavior === "edit" && !deleteBlock) {
+			quote.cursor = quote.body.length;
+			quote.titleCursor = null;
+			openInlineEditor(app, view, quote, settings);
+			return true;
+		}
+		view.dispatch({
+			changes: { from: quote.from, to: main.head },
+			selection: { anchor: quote.from },
+			userEvent: "delete.backward",
+			annotations: isolateHistory.of("full"),
+			scrollIntoView: true,
+		});
+		return true;
+	};
 	return [
 		Prec.highest(editingField),
+		Prec.highest(keymap.of([
+			{ key: "Backspace", run: view => backspace(view) },
+			{ key: "Ctrl-Backspace", run: view => backspace(view, true) },
+		])),
 		ViewPlugin.define((view) => {
 			let active = view.state.field(editingField, false)?.widget;
 			let disposed = false;
@@ -54,7 +85,7 @@ export function createInlineEditorExtension(app: App): Extension {
 							quote.titleCursor = pointerTarget.title ? calloutTitle(quote.header).text.length : null;
 						}
 						clearPointer();
-						openInlineEditor(app, view, quote, inserted);
+						openInlineEditor(app, view, quote, settings, inserted);
 					}
 				});
 			};
@@ -168,7 +199,7 @@ export function createInlineEditorExtension(app: App): Extension {
 				quote.titleCursor = target.title ? calloutTitle(quote.header).text.length : null;
 				event.preventDefault();
 				event.stopImmediatePropagation();
-				openInlineEditor(app, view, quote);
+				openInlineEditor(app, view, quote, settings);
 			};
 			const ownerWindow = view.dom.ownerDocument.defaultView!;
 			view.dom.addEventListener("pointerdown", onPointerDown, true);
@@ -239,14 +270,14 @@ export function createInlineEditorExtension(app: App): Extension {
 	];
 }
 
-export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, selectTitleOnOpen = false): void {
+export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, settings: BetterBlockquoteSettings, selectTitleOnOpen = false): void {
 	if (view.state.field(editorLivePreviewField, false) !== true) return;
 	if (view.state.field(editingField, false)) {
 		new Notice("このエディタで開いている引用の編集を、先に閉じてください。");
 		return;
 	}
 	// The widget owns rendering; the source keeps the actual body caret.
-	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app), selectTitleOnOpen)),
+	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app, settings), selectTitleOnOpen)),
 		selection: { anchor: quote.from + (quote.titleCursor !== null ? titleOffsetToSource(quote, quote.source, quote.titleCursor) :
 			bodyOffsetToSource(quote, quote.source, quote.cursor)) },
 		annotations: isolateHistory.of("before"), scrollIntoView: true });
