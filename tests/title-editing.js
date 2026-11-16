@@ -17,7 +17,7 @@
 		const press = (target, key, options = {}) => target.contentDOM.dispatchEvent(new KeyboardEvent("keydown", {
 			key, code: key, bubbles: true, cancelable: true, ...options,
 		}));
-		const text = "before\n\n> [!question]- Title\n> - [[古代懐疑主義入門――判断保留の十の方式 (岩波文庫)｜J.アナス,J.バーンズ,金山 弥平]]\n> \n\nafter";
+		const text = "before\n\n> [!question]- Title\n> - [[Example note]]\n> \n\nafter";
 		const open = async (value = text, needle = "Title") => {
 			if (root()) { root().querySelector(":scope > .bbe-close").click(); await pause(); }
 			cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: value }, selection: { anchor: 0 } });
@@ -65,7 +65,7 @@
 		assert(!root() && cm.hasFocus && cm.state.selection.main.head < editor.getValue().indexOf(">"), "title start did not exit above the callout");
 		passed.push("outside/title/body navigation by arrows and Enter");
 
-		({ title, body } = await open(text, "古代"));
+		({ title, body } = await open(text, "Example"));
 		const retained = body;
 		root().querySelector(".callout-title-inner").click(); await pause();
 		assert(title.hasFocus, "clicking the title did not focus its editor");
