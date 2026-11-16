@@ -9,6 +9,18 @@ import { editingField, mirroredUpdate, sourceUpdate, stopEditing, syncConflict, 
 import { NativeQuoteEditor } from "./native-editor";
 import { CalloutTypeModal, changeCalloutType } from "./callout-type-modal";
 
+/** Coordinates relative to the block survive source synchronization and scrolling. */
+export interface QuoteClickPosition { x: number; y: number }
+
+export function quoteClickPosition(event: MouseEvent, block: HTMLElement): QuoteClickPosition | undefined {
+	const rect = block.getBoundingClientRect();
+	// Programmatic clicks have no text coordinates to restore.
+	if (event.clientX === 0 && event.clientY === 0 ||
+		event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom ||
+		!rect.width || !rect.height) return undefined;
+	return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+}
+
 /** Keep the same native editor and its history while mirroring text into the note. */
 export class QuoteEditorWidget extends WidgetType {
 	private body: string;
@@ -39,7 +51,7 @@ export class QuoteEditorWidget extends WidgetType {
 	private get titleView(): EditorView | undefined { return this.titleEditor?.editorView; }
 
 	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension,
-		private readonly selectTitleOnOpen = false) {
+		private readonly selectTitleOnOpen = false, private readonly clickPosition?: QuoteClickPosition) {
 		super();
 		this.body = quote.body;
 		this.lastSource = quote.source;
@@ -134,7 +146,9 @@ export class QuoteEditorWidget extends WidgetType {
 		preview.addEventListener("click", event => {
 			event.preventDefault();
 			event.stopPropagation();
+			const position = quoteClickPosition(event, root);
 			this.focusTitle(this.title.length);
+			if (position && this.titleView) this.restoreClickPosition(this.titleView, position);
 		});
 		if (!this.titleHost) {
 			this.titleHost = root.ownerDocument.createElement("div");
@@ -234,6 +248,27 @@ export class QuoteEditorWidget extends WidgetType {
 		this.scheduleSync();
 	}
 
+	private restoreClickPosition(view: EditorView, position: QuoteClickPosition): void {
+		const { doc, selection } = view.state;
+		// Wait for the native editor's layout before resolving a visual text position.
+		view.requestMeasure({
+			read: () => {
+				if (this.disposed || !this.root?.isConnected || !view.hasFocus || view.compositionStarted) return null;
+				const rect = this.root.getBoundingClientRect();
+				return view.posAtCoords({ x: rect.left + position.x, y: rect.top + position.y }, false);
+			},
+			write: at => {
+				// A measurement write still runs inside CodeMirror's update.
+				queueMicrotask(() => {
+					if (at === null || this.disposed || !view.hasFocus || view.compositionStarted ||
+						view.state.doc !== doc || !view.state.selection.eq(selection)) return;
+					view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+					this.scheduleSync();
+				});
+			},
+		});
+	}
+
 	private mountEditor(root: HTMLElement): void {
 		// Mount after the parent update to avoid reentrant CodeMirror updates.
 		queueMicrotask(async () => {
@@ -286,6 +321,8 @@ export class QuoteEditorWidget extends WidgetType {
 				if (this.shownHeader !== this.quote.header) void this.refreshShell();
 				if (this.quote.titleCursor !== null && this.titleView) this.focusTitle(this.quote.titleCursor, this.selectTitleOnOpen);
 				else component.focus();
+				if (this.clickPosition) this.restoreClickPosition(
+					this.quote.titleCursor !== null && this.titleView ? this.titleView : component.editorView, this.clickPosition);
 				if (this.receiveSelection) this.scheduleReceive(true);
 				this.scheduleSync();
 				this.parent.requestMeasure();

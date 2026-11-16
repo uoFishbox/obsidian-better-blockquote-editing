@@ -46,10 +46,10 @@
 			await pause(300);
 			assert(root(), "clicking the native callout body did not open the editor: " + JSON.stringify(cm.state.selection.toJSON()));
 			const body = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
-			assert(body.hasFocus && body.state.selection.main.head === 0 && cm.state.doc.toString() === text,
+			assert(body.hasFocus && body.state.selection.main.empty && cm.state.doc.toString() === text,
 				"native body click lost focus, cursor position or source text");
 		}
-		passed.push("native callout body mouse events open the editor at the body start");
+		passed.push("native callout body mouse events open the editor with a collapsed caret and unchanged source");
 
 		// Native mobile taps can leave an empty caret on the header before click.
 		// Desktop mouse input instead selects the whole block backward. Both must

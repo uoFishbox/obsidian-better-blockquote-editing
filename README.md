@@ -7,7 +7,7 @@ Obsidian 1.14.4以降のLive Previewに対応しています。
 ## 使い方
 
 1. [BRAT](https://github.com/TfTHacker/obsidian42-brat)プラグインに `https://github.com/uoFishbox/obsidian-better-blockquote-editing` を登録し、インストール後有効化してください。
-2. Live Previewでcallout・引用内にカーソルを移動するとエディタが開きます。calloutの本文やタイトルのクリック／タップでも開けます。
+2. Live Previewでcallout・引用内にカーソルを移動するとエディタが開きます。calloutの本文やタイトルのクリック／タップでも開き、クリックした位置にキャレットを移動します。
 3. 通常のMarkdownと同じように編集できます。
 4. **Esc**、**Ctrl+Enter**（**Cmd+Enter**）、右上の閉じるアイコンをクリックするか、矢印キーでエディタ外にキャレットを移動すると編集を終了します。
 

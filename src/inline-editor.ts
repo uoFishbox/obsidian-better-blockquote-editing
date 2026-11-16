@@ -4,7 +4,7 @@ import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
 import { App, editorLivePreviewField } from "obsidian";
 import { bodyOffsetToSource, calloutTitle, findQuote, titleOffsetToSource, type QuoteBlock } from "./quote";
 import { editingField, mirroredUpdate, startEditing, stopEditing } from "./editing-state";
-import { QuoteEditorWidget } from "./quote-editor-widget";
+import { QuoteEditorWidget, quoteClickPosition, type QuoteClickPosition } from "./quote-editor-widget";
 import { CalloutTypeModal, changeCalloutType } from "./callout-type-modal";
 import type { BetterBlockquoteSettings } from "./settings";
 import { textChanges } from "./sync";
@@ -48,7 +48,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 			let scheduled = false;
 			let dismissed = false;
 			let insertedSelection: EditorSelection | undefined;
-			let pointerTarget: { from: number; title: boolean } | null = null;
+			let pointerTarget: { from: number; title: boolean; position?: QuoteClickPosition } | null = null;
 			let pointerRelease: ReturnType<typeof setTimeout> | undefined;
 			let typeModal: CalloutTypeModal | undefined;
 			let typeTarget: { from: number; to: number } | undefined;
@@ -81,13 +81,15 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 						quote.titleCursor = inserted ? 0 : null;
 					}
 					if (quote) {
+						let position: QuoteClickPosition | undefined;
 						// Native selection may replace the clicked DOM before click is delivered.
 						if (pointerTarget?.from === quote.from) {
 							quote.cursor = 0;
 							quote.titleCursor = pointerTarget.title ? calloutTitle(quote.header).text.length : null;
+							position = pointerTarget.position;
 						}
 						clearPointer();
-						openInlineEditor(app, view, quote, settings, inserted);
+						openInlineEditor(app, view, quote, settings, inserted, position);
 					}
 				});
 			};
@@ -169,7 +171,8 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					return;
 				}
 				const quote = findQuote(view.state.doc.toString(), view.posAtDOM(target.block), true);
-				if (quote) pointerTarget = { from: quote.from, title: target.title };
+				if (quote) pointerTarget = { from: quote.from, title: target.title,
+					position: target.editButton ? undefined : quoteClickPosition(event, target.block) };
 			};
 			const onPointerUp = () => {
 				// Keep the target through native selection and click, then discard it after the gesture.
@@ -202,7 +205,8 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 				quote.titleCursor = target.title ? calloutTitle(quote.header).text.length : null;
 				event.preventDefault();
 				event.stopImmediatePropagation();
-				openInlineEditor(app, view, quote, settings);
+				openInlineEditor(app, view, quote, settings, false,
+					target.editButton ? undefined : quoteClickPosition(event, target.block));
 			};
 			const ownerWindow = view.dom.ownerDocument.defaultView!;
 			view.dom.addEventListener("pointerdown", onPointerDown, true);
@@ -273,7 +277,8 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 	];
 }
 
-export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, settings: BetterBlockquoteSettings, selectTitleOnOpen = false): void {
+export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, settings: BetterBlockquoteSettings,
+	selectTitleOnOpen = false, clickPosition?: QuoteClickPosition): void {
 	if (view.state.readOnly || view.compositionStarted || view.state.field(editorLivePreviewField, false) !== true) return;
 	const editing = view.state.field(editingField, false);
 	if (editing) {
@@ -290,7 +295,7 @@ export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, 
 		quote = current;
 	}
 	// The widget owns rendering; the source keeps the actual body caret.
-	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app, settings), selectTitleOnOpen)),
+	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app, settings), selectTitleOnOpen, clickPosition)),
 		selection: { anchor: quote.from + (quote.titleCursor !== null ? titleOffsetToSource(quote, quote.source, quote.titleCursor) :
 			bodyOffsetToSource(quote, quote.source, quote.cursor)) },
 		annotations: isolateHistory.of("before"), scrollIntoView: true });
