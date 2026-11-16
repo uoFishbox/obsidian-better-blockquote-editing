@@ -1,4 +1,4 @@
-import { Prec, type Extension } from "@codemirror/state";
+import { Prec, type EditorSelection, type Extension } from "@codemirror/state";
 import { isolateHistory } from "@codemirror/commands";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 import { App, editorLivePreviewField, Notice } from "obsidian";
@@ -15,6 +15,7 @@ export function createInlineEditorExtension(app: App): Extension {
 			let disposed = false;
 			let scheduled = false;
 			let dismissed = false;
+			let insertedSelection: EditorSelection | undefined;
 			let pointerTarget: { from: number; title: boolean } | null = null;
 			let pointerRelease: ReturnType<typeof setTimeout> | undefined;
 			let typeModal: CalloutTypeModal | undefined;
@@ -29,6 +30,8 @@ export function createInlineEditorExtension(app: App): Extension {
 						view.state.selection.ranges.length !== 1) return;
 					const editing = view.state.field(editingField, false);
 					const selection = view.state.selection.main;
+					const inserted = insertedSelection?.eq(view.state.selection) === true;
+					insertedSelection = undefined;
 					const head = selection.head;
 					if (editing) {
 						if (selection.empty && (head < editing.from || head > editing.to)) {
@@ -39,10 +42,10 @@ export function createInlineEditorExtension(app: App): Extension {
 					if (dismissed || view.state.readOnly || editing !== null) return;
 					const quote = findQuote(view.state.doc.toString(), selection.empty ? head : selection.to - 1, true);
 					if (!selection.empty) {
-						// Obsidian selects the whole rendered callout backward when its body is clicked.
-						if (!quote?.header || head !== quote.from || selection.anchor !== quote.to) return;
+						// Insert callout selects its new type; clicking a rendered body selects the whole block backward.
+						if (!quote?.header || !inserted && (head !== quote.from || selection.anchor !== quote.to)) return;
 						quote.cursor = 0;
-						quote.titleCursor = null;
+						quote.titleCursor = inserted ? 0 : null;
 					}
 					if (quote) {
 						// Native selection may replace the clicked DOM before click is delivered.
@@ -51,7 +54,7 @@ export function createInlineEditorExtension(app: App): Extension {
 							quote.titleCursor = pointerTarget.title ? calloutTitle(quote.header).text.length : null;
 						}
 						clearPointer();
-						openInlineEditor(app, view, quote);
+						openInlineEditor(app, view, quote, inserted);
 					}
 				});
 			};
@@ -178,6 +181,24 @@ export function createInlineEditorExtension(app: App): Extension {
 			scheduleSelection();
 			return {
 				update(update) {
+					if (update.docChanged) {
+						insertedSelection = undefined;
+						const selection = update.state.selection.main;
+						if (update.state.selection.ranges.length === 1 && !selection.empty) {
+							const quote = findQuote(update.state.doc.toString(), selection.from, true);
+							const type = quote?.header && /^\[!([^|\]]+)/.exec(quote.header);
+							if (quote && type) {
+								const from = quote.from + quote.source.indexOf("[!");
+								const to = quote.from + quote.source.indexOf("]") + 1;
+								if (selection.from === from + 2 && selection.to === from + 2 + type[1]!.length) {
+									// Only a newly inserted marker qualifies, never selecting or replacing an existing type.
+									update.changes.iterChangedRanges((_fromA, _toA, fromB, toB) => {
+										if (fromB <= from && toB >= to) insertedSelection = update.state.selection;
+									});
+								}
+							}
+						}
+					}
 					if (typeTarget && update.docChanged) {
 						typeTarget = { from: update.changes.mapPos(typeTarget.from, 1), to: update.changes.mapPos(typeTarget.to, -1) };
 					}
@@ -186,7 +207,7 @@ export function createInlineEditorExtension(app: App): Extension {
 						transaction.effects.some((effect) => effect.is(stopEditing)))) {
 						// Restoring focus after close must not immediately open another editor.
 						dismissed = true;
-					} else if (update.selectionSet && !update.startState.selection.eq(update.state.selection)) {
+					} else if (insertedSelection || update.selectionSet && !update.startState.selection.eq(update.state.selection)) {
 						dismissed = false;
 					}
 					const editing = update.state.field(editingField);
@@ -197,7 +218,7 @@ export function createInlineEditorExtension(app: App): Extension {
 					if (external.some(transaction => transaction.docChanged || transaction.selection)) {
 						editing?.widget.scheduleReceive(external.some(transaction => !!transaction.selection));
 					}
-					if (update.selectionSet || update.focusChanged ||
+					if (insertedSelection || update.selectionSet || update.focusChanged ||
 						update.startState.field(editorLivePreviewField, false) !== update.state.field(editorLivePreviewField, false)) scheduleSelection();
 				},
 				destroy() {
@@ -218,14 +239,14 @@ export function createInlineEditorExtension(app: App): Extension {
 	];
 }
 
-export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock): void {
+export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, selectTitleOnOpen = false): void {
 	if (view.state.field(editorLivePreviewField, false) !== true) return;
 	if (view.state.field(editingField, false)) {
 		new Notice("このエディタで開いている引用の編集を、先に閉じてください。");
 		return;
 	}
 	// The widget owns rendering; the source keeps the actual body caret.
-	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app))),
+	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app), selectTitleOnOpen)),
 		selection: { anchor: quote.from + (quote.titleCursor !== null ? titleOffsetToSource(quote, quote.source, quote.titleCursor) :
 			bodyOffsetToSource(quote, quote.source, quote.cursor)) },
 		annotations: isolateHistory.of("before"), scrollIntoView: true });

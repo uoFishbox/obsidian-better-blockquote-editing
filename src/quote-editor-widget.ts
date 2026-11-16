@@ -36,7 +36,8 @@ export class QuoteEditorWidget extends WidgetType {
 	private titleHost?: HTMLElement;
 	private typeModal?: CalloutTypeModal;
 
-	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension) {
+	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension,
+		private readonly selectTitleOnOpen = false) {
 		super();
 		this.body = quote.body;
 		this.lastSource = quote.source;
@@ -205,10 +206,13 @@ export class QuoteEditorWidget extends WidgetType {
 		this.typeModal.open();
 	}
 
-	private focusTitle(offset?: number): void {
+	private focusTitle(offset?: number, selectAll = false): void {
 		if (!this.titleView || this.isComposing()) return;
 		this.titleHost?.parentElement?.addClass("bbe-editing-title");
-		if (offset !== undefined) this.titleView.dispatch({ selection: { anchor: Math.min(this.title.length, Math.max(0, offset)) }, scrollIntoView: true });
+		if (offset !== undefined) this.titleView.dispatch({ selection: {
+			anchor: selectAll ? 0 : Math.min(this.title.length, Math.max(0, offset)),
+			head: selectAll ? this.title.length : undefined,
+		}, scrollIntoView: true });
 		this.titleView.focus();
 		this.scheduleSync();
 		this.parent.requestMeasure();
@@ -286,7 +290,7 @@ export class QuoteEditorWidget extends WidgetType {
 				this.mounted = true;
 				if (this.shownHeader !== this.quote.header) void this.refreshShell();
 				component.editorView.contentDOM.setAttribute("aria-label", "引用・calloutの本文");
-				if (this.quote.titleCursor !== null && this.titleView) this.focusTitle(this.quote.titleCursor);
+				if (this.quote.titleCursor !== null && this.titleView) this.focusTitle(this.quote.titleCursor, this.selectTitleOnOpen);
 				else component.focus();
 				if (this.receiveSelection) this.scheduleReceive(true);
 				this.scheduleSync();
