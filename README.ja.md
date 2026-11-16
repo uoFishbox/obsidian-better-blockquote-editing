@@ -4,6 +4,8 @@
 
 Obsidianのcallout・引用を、標準のMarkdownエディタでその場で編集するプラグインです。外側の `>` を意識せず、テーマの装飾を保ったまま本文やタイトルを編集できます。
 
+![callouts](docs/images/callouts.gif)
+
 Obsidian 1.14.4以降のLive Previewに対応しています。
 
 ## 使い方

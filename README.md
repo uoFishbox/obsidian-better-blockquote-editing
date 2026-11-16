@@ -4,6 +4,9 @@ English | [日本語](README.ja.md)
 
 Edit Obsidian callouts and blockquotes inline with the native Markdown editor. Edit their content and titles without worrying about the outer `>` markers, while preserving your theme's styling.
 
+![callouts](docs/images/callouts.gif)
+
+
 Supports Live Preview in Obsidian 1.14.4 and later.
 
 ## Usage
