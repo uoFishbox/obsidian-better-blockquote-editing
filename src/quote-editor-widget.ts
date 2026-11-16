@@ -61,7 +61,6 @@ export class QuoteEditorWidget extends WidgetType {
 		root.contentEditable = "false";
 		root.tabIndex = -1;
 		root.setAttribute("role", "group");
-		root.setAttribute("aria-label", this.quote.header ? "Calloutを編集" : "引用を編集");
 		this.mountEditor(root);
 		return root;
 	}
@@ -287,7 +286,6 @@ export class QuoteEditorWidget extends WidgetType {
 				component.load();
 				this.mounted = true;
 				if (this.shownHeader !== this.quote.header) void this.refreshShell();
-				component.editorView.contentDOM.setAttribute("aria-label", "引用・calloutの本文");
 				if (this.quote.titleCursor !== null && this.titleView) this.focusTitle(this.quote.titleCursor, this.selectTitleOnOpen);
 				else component.focus();
 				if (this.receiveSelection) this.scheduleReceive(true);
