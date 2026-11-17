@@ -47,8 +47,17 @@ export class QuoteEditorWidget extends WidgetType {
 	private titleEditor?: NativeQuoteEditor;
 	private titleHost?: HTMLElement;
 	private typeModal?: CalloutTypeModal;
+	private openingScroll: { element: HTMLElement; top: number; left: number }[] = [];
+	private readonly openingHeight: number;
+	private readonly cancelOpeningScroll = () => {
+		for (const { element } of this.openingScroll) {
+			for (const event of ["wheel", "touchmove", "pointerdown", "keydown"]) element.removeEventListener(event, this.cancelOpeningScroll, true);
+		}
+		this.openingScroll = [];
+	};
 
 	private get titleView(): EditorView | undefined { return this.titleEditor?.editorView; }
+	get preservesOpeningScroll(): boolean { return this.openingScroll.length > 0; }
 
 	constructor(private app: App, public quote: QuoteBlock, private parent: EditorView, private readonly inlineExtension: Extension,
 		private readonly selectTitleOnOpen = false, private readonly clickPosition?: QuoteClickPosition) {
@@ -60,7 +69,16 @@ export class QuoteEditorWidget extends WidgetType {
 		this.title = this.syncedTitle = calloutTitle(quote.header).text;
 		this.pendingTitle = ChangeSet.empty(this.title.length);
 		this.sourceFile = parent.state.field(editorInfoField, false)?.file ?? null;
+		for (let element: HTMLElement | null = parent.scrollDOM; element; element = element.parentElement) {
+			if (!element.matches(".cm-scroller")) continue;
+			this.openingScroll.push({ element, top: element.scrollTop, left: element.scrollLeft });
+			for (const event of ["wheel", "touchmove", "pointerdown", "keydown"]) element.addEventListener(event, this.cancelOpeningScroll, true);
+		}
+		// Keep the replacement from collapsing while Markdown and the native editors load.
+		this.openingHeight = parent.lineBlockAt(quote.to).bottom - parent.lineBlockAt(quote.from).top;
 	}
+
+	get estimatedHeight(): number { return this.openingHeight; }
 
 	toDOM(): HTMLElement {
 		if (this.root) {
@@ -70,6 +88,7 @@ export class QuoteEditorWidget extends WidgetType {
 		const root = this.parent.dom.ownerDocument.createElement("div");
 		this.root = root;
 		root.className = "bbe-inline-editor";
+		root.style.minHeight = `${this.openingHeight}px`;
 		root.contentEditable = "false";
 		root.tabIndex = -1;
 		root.setAttribute("role", "group");
@@ -169,6 +188,7 @@ export class QuoteEditorWidget extends WidgetType {
 				if (direction < 0) this.finish(-1, true);
 				else this.focusBody(vertical ? Math.min(this.titleView!.state.selection.main.head, this.body.split("\n", 1)[0]!.length) : 0);
 			}, this.sourceFile, () => this.scheduleSync(), [
+				EditorView.scrollHandler.of(() => this.preservesOpeningScroll),
 				// A title is one Markdown line, including pasted text.
 				EditorState.transactionFilter.of(tr => tr.newDoc.lines > 1 ? [] : tr),
 				EditorView.updateListener.of(update => {
@@ -234,7 +254,7 @@ export class QuoteEditorWidget extends WidgetType {
 		if (offset !== undefined) this.titleView.dispatch({ selection: {
 			anchor: selectAll ? 0 : Math.min(this.title.length, Math.max(0, offset)),
 			head: selectAll ? this.title.length : undefined,
-		}, scrollIntoView: true });
+		}, scrollIntoView: this.openingScroll.length === 0 });
 		this.titleView.focus();
 		this.scheduleSync();
 		this.parent.requestMeasure();
@@ -262,7 +282,7 @@ export class QuoteEditorWidget extends WidgetType {
 				queueMicrotask(() => {
 					if (at === null || this.disposed || !view.hasFocus || view.compositionStarted ||
 						view.state.doc !== doc || !view.state.selection.eq(selection)) return;
-					view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+					view.dispatch({ selection: { anchor: at } });
 					this.scheduleSync();
 				});
 			},
@@ -312,7 +332,9 @@ export class QuoteEditorWidget extends WidgetType {
 					const at = component.editorView.state.selection.main.head;
 					this.focusTitle(vertical ? at : this.title.length);
 				} else this.finish(direction, true);
-			}, this.sourceFile, () => this.scheduleSync(), this.inlineExtension);
+			}, this.sourceFile, () => this.scheduleSync(), [
+				EditorView.scrollHandler.of(() => this.preservesOpeningScroll), this.inlineExtension,
+			]);
 			this.mounts.set(root, component);
 			try {
 				component.load();
@@ -325,6 +347,7 @@ export class QuoteEditorWidget extends WidgetType {
 				if (this.receiveSelection) this.scheduleReceive(true);
 				this.scheduleSync();
 				this.parent.requestMeasure();
+				this.finishOpening(root, component.editorView);
 			} catch (error) {
 				this.mounts.delete(root);
 				component.unload();
@@ -332,6 +355,31 @@ export class QuoteEditorWidget extends WidgetType {
 				new Notice("Obsidian標準エディタを開けませんでした。コンソールを確認してください。");
 				this.finish();
 			}
+		});
+	}
+
+	private finishOpening(root: HTMLElement, view: EditorView): void {
+		view.requestMeasure({
+			read: () => undefined,
+			write: () => {
+				if (this.disposed) return;
+				root.style.minHeight = "";
+				// Let the note measure the final height before restoring its scroll position.
+				const outer = this.openingScroll[this.openingScroll.length - 1]?.element;
+				const note = (outer ? EditorView.findFromDOM(outer) : null) ?? this.parent;
+				note.requestMeasure({
+					read: () => undefined,
+					write: () => queueMicrotask(() => {
+						if (!this.disposed && this.parent.state.field(editingField, false)?.widget === this) {
+							for (const { element, top, left } of this.openingScroll) {
+								element.scrollTop = top;
+								element.scrollLeft = left;
+							}
+						}
+						this.cancelOpeningScroll();
+					}),
+				});
+			},
 		});
 	}
 
@@ -652,6 +700,7 @@ export class QuoteEditorWidget extends WidgetType {
 	dispose(): void {
 		if (this.disposed) return;
 		this.disposed = true;
+		this.cancelOpeningScroll();
 		this.typeModal?.close();
 		for (const editor of this.mounts.values()) editor.unload();
 		this.mounts.clear();

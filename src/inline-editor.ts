@@ -38,6 +38,16 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 	};
 	return [
 		Prec.highest(editingField),
+		EditorView.scrollHandler.of(view => {
+			// Native selection can reveal a hidden source caret before the widget mounts.
+			const editing = view.state.field(editingField, false);
+			if (editing) return editing.widget.preservesOpeningScroll;
+			const { main, ranges } = view.state.selection;
+			if (!view.hasFocus || view.state.readOnly || view.compositionStarted || ranges.length !== 1 ||
+				view.state.field(editorLivePreviewField, false) !== true) return false;
+			const quote = findQuote(view.state.doc.toString(), main.empty ? main.head : main.to - 1, true);
+			return !!quote && (main.empty || !!quote.header && main.head === quote.from && main.anchor === quote.to);
+		}),
 		Prec.highest(keymap.of([
 			{ key: "Backspace", run: view => backspace(view) },
 			{ key: "Ctrl-Backspace", run: view => backspace(view, true) },
@@ -298,7 +308,7 @@ export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, 
 	view.dispatch({ effects: startEditing.of(new QuoteEditorWidget(app, quote, view, createInlineEditorExtension(app, settings), selectTitleOnOpen, clickPosition)),
 		selection: { anchor: quote.from + (quote.titleCursor !== null ? titleOffsetToSource(quote, quote.source, quote.titleCursor) :
 			bodyOffsetToSource(quote, quote.source, quote.cursor)) },
-		annotations: isolateHistory.of("before"), scrollIntoView: true });
+		annotations: isolateHistory.of("before") });
 	// Offscreen widgets retain their editors until explicitly disposed.
 	editing?.widget.dispose();
 }
