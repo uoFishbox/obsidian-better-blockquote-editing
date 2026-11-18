@@ -646,7 +646,7 @@ export class QuoteEditorWidget extends WidgetType {
 		return drafts;
 	}
 
-	finish(direction: ExitDirection = 1, automatic = false): void {
+	finish(direction?: ExitDirection, atBoundary = false): void {
 		queueMicrotask(() => {
 			if (this.disposed) return;
 			let current = this.parent.state.field(editingField, false);
@@ -660,22 +660,22 @@ export class QuoteEditorWidget extends WidgetType {
 					return;
 				}
 			}
-			if (!this.sync() && automatic) return;
+			if (!this.sync() && direction !== undefined) return;
 			current = this.parent.state.field(editingField, false)!;
 			const doc = this.parent.state.doc;
 			const firstLine = doc.lineAt(current.from);
 			const lastLine = doc.lineAt(current.to);
 			let anchor: number;
 			let changes: { from: number; insert: string } | undefined;
-			if (direction < 0) {
+			if (direction === -1) {
 				anchor = firstLine.number > 1 ? doc.line(firstLine.number - 1).to : 0;
-				if (firstLine.number === 1 && !this.parent.state.readOnly) changes = { from: 0, insert: "\n" };
+				if (firstLine.number === 1 && atBoundary && !this.parent.state.readOnly) changes = { from: 0, insert: "\n" };
 				else if (firstLine.number === 1) anchor = Math.min(doc.length, current.to + 1);
 			} else {
-				anchor = lastLine.number < doc.lines ? doc.line(lastLine.number + 1).from : doc.length + 2;
-				if (lastLine.number === doc.lines) {
-					if (!this.parent.state.readOnly) changes = { from: doc.length, insert: "\n\n" };
-					else anchor = Math.max(0, current.from - 1);
+				anchor = lastLine.number < doc.lines ? doc.line(lastLine.number + 1).from : current.to;
+				if (lastLine.number === doc.lines && atBoundary && !this.parent.state.readOnly) {
+					changes = { from: doc.length, insert: "\n\n" };
+					anchor = doc.length + changes.insert.length;
 				}
 			}
 			this.parent.dispatch({

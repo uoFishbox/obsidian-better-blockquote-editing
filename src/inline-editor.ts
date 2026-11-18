@@ -79,7 +79,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					const quote = findQuote(view.state.doc, selection.empty ? head : selection.to - 1, true);
 					if (editing && (!quote || quote.from === editing.from)) {
 						if (selection.empty && (head < editing.from || head > editing.to)) {
-							editing.widget.finish(head < editing.from ? -1 : 1, true);
+							editing.widget.finish(head < editing.from ? -1 : 1);
 						}
 						return;
 					}

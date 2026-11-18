@@ -201,6 +201,21 @@
 			}
 		}
 		passed.push("outside caret and boundary arrows close quotes/callouts in Live Preview, flush pending edits and place the caret above/below");
+		for (const text of ["> body", "before\n\n> [!note] Title\n> body"]) {
+			for (const closeMethod of ["button", "Escape", "Mod+Enter"]) {
+				cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: text }, selection: { anchor: 0 } });
+				const embedded = await open();
+				if (closeMethod === "button") await close();
+				else {
+					const isMac = /Mac/.test(navigator.platform);
+					if (closeMethod === "Escape") press(embedded, "Escape");
+					else press(embedded, "Enter", isMac ? { metaKey: true } : { ctrlKey: true });
+					await pause();
+				}
+				assert(!root() && editor.getValue() === text, closeMethod + " changed a quote at the end of the note");
+			}
+		}
+		passed.push("closing an unedited quote at the end of the note preserves its text");
 		for (const direction of [-1, 1]) {
 			const text = "> body";
 			cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: text }, selection: { anchor: 3 } });
@@ -308,7 +323,7 @@
 		embedded.contentDOM.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "日本語" }));
 		await pause();
 		await close();
-		assert(!root() && editor.getValue() === "> 日本語body\n\n", "composition text was lost on close");
+		assert(!root() && editor.getValue() === "> 日本語body", "closing changed the composed text or appended blank lines");
 		passed.push("simulated composition stays active during live sync and prevents premature closing");
 		cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: "before\n\n> body\n\nafter" }, selection: { anchor: 0 } });
 		embedded = await open();
