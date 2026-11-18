@@ -81,6 +81,22 @@
 		const embedded = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
 		press(embedded, "Backspace"); await pause();
 		assert(cm.state.doc.toString() === text.replace("one", "oe"), "Backspace inside the body removed the block");
+		const callout = "before\n\n> [!note] Title\n> body\n> last\n\nafter";
+		await load(callout, callout.indexOf("body"));
+		const body = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
+		assert(body.hasFocus && body.state.selection.main.head === 0, "callout body start is not focused");
+		const backwardInput = () => body.contentDOM.dispatchEvent(new InputEvent("beforeinput", {
+			inputType: "deleteContentBackward", bubbles: true, cancelable: true,
+		}));
+		assert(!press(body, "Backspace") && !backwardInput(), "backward deletion was not canceled at the body start");
+		await pause();
+		assert(root() && body.hasFocus && body.state.selection.main.head === 0 &&
+			cm.state.doc.toString() === callout, "Backspace at the body start moved the caret or changed the note");
+		body.dispatch({ selection: { anchor: 0, head: 1 } });
+		assert(backwardInput(), "beforeinput canceled deletion of selected body text");
+		press(body, "Backspace"); await pause();
+		assert(cm.state.doc.toString() === callout.replace("body", "ody"), "Backspace did not delete selected body text");
+		passed.push("Backspace and beforeinput are canceled at the callout body start while selected text can still be deleted");
 		await close();
 		await view.setState({ ...view.getState(), mode: "source", source: true }, { history: false }); await pause();
 		await load(text, anchor);

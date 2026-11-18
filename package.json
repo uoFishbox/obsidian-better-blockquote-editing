@@ -1,6 +1,6 @@
 {
 	"name": "better-blockquote-editing",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"description": "Inline native Markdown editing for Obsidian callouts and blockquotes",
 	"main": "main.js",
 	"scripts": {

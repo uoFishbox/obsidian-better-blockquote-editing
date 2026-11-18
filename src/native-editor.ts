@@ -1,8 +1,32 @@
 import { Prec, type Extension } from "@codemirror/state";
-import { EditorView, keymap, type ViewUpdate } from "@codemirror/view";
+import { EditorView, keymap, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { EmbeddableMarkdownEditorComponent } from "@mnaoumov/obsidian-lib/components/embeddable-markdown-editor-component";
 import type { TFile } from "obsidian";
 import { editingField, sourceUpdate, type ExitDirection } from "./editing-state";
+
+const preventBackspaceAtStart = ViewPlugin.define(view => {
+	const content = view.contentDOM;
+	const preventAtStart = (event: KeyboardEvent | InputEvent) => {
+		const { main, ranges } = view.state.selection;
+		if (!event.isComposing && !view.compositionStarted && view.root.activeElement === content &&
+			ranges.length === 1 && main.empty && main.head === 0) event.preventDefault();
+	};
+	const onKeyDown = (event: KeyboardEvent) => {
+		if (event.key === "Backspace" && !event.ctrlKey && !event.altKey && !event.metaKey) preventAtStart(event);
+	};
+	const onBeforeInput = (event: InputEvent) => {
+		if (event.inputType === "deleteContentBackward") preventAtStart(event);
+	};
+	// iOS can bypass or defer CodeMirror's key handlers before native deletion.
+	content.addEventListener("keydown", onKeyDown, true);
+	content.addEventListener("beforeinput", onBeforeInput, true);
+	return {
+		destroy() {
+			content.removeEventListener("keydown", onKeyDown, true);
+			content.removeEventListener("beforeinput", onBeforeInput, true);
+		},
+	};
+});
 
 // Reuse the same editing capability inside the native editor. Each level edits
 // its outermost quote, so Live Preview never hides a widget inside another callout.
@@ -33,7 +57,7 @@ export class NativeQuoteEditor extends EmbeddableMarkdownEditorComponent {
 	}
 
 	protected buildExtensions(): Extension[] {
-		return [...super.buildExtensions(), this.inlineExtension,
+		return [...super.buildExtensions(), this.inlineExtension, preventBackspaceAtStart,
 			Prec.highest(keymap.of([
 				{ key: "ArrowUp", run: (view) => this.exitAtEdge(view, -1, true) },
 				{ key: "ArrowDown", run: (view) => this.exitAtEdge(view, 1, true) },

@@ -17,6 +17,9 @@
 		const press = (target, key, options = {}) => target.contentDOM.dispatchEvent(new KeyboardEvent("keydown", {
 			key, code: key, bubbles: true, cancelable: true, ...options,
 		}));
+		const backwardInput = title => title.contentDOM.dispatchEvent(new InputEvent("beforeinput", {
+			inputType: "deleteContentBackward", bubbles: true, cancelable: true,
+		}));
 		const text = "before\n\n> [!question]- Title\n> - [[Example note]]\n> \n\nafter";
 		const open = async (value = text, needle = "Title") => {
 			if (root()) { root().querySelector(":scope > .bbe-close").click(); await pause(); }
@@ -61,6 +64,18 @@
 		assert(!root() && cm.hasFocus && cm.state.selection.main.head < editor.getValue().indexOf(">"), "title start did not exit above the callout");
 		passed.push("outside/title/body navigation by arrows and Enter");
 
+		({ title, body } = await open());
+		title.dispatch({ selection: { anchor: 0 } });
+		assert(!press(title, "Backspace") && !backwardInput(title), "backward deletion was not canceled at the title start");
+		await pause();
+		assert(root() && title.hasFocus && title.state.selection.main.head === 0 && editor.getValue() === text,
+			"Backspace at the title start moved the caret or changed the note");
+		title.dispatch({ selection: { anchor: 0, head: 1 } });
+		assert(backwardInput(title), "beforeinput canceled deletion of selected title text");
+		press(title, "Backspace"); await pause();
+		assert(editor.getValue() === text.replace("Title", "itle"), "Backspace did not delete selected title text");
+		passed.push("Backspace and beforeinput are canceled at the title start while selected text can still be deleted");
+
 		({ title, body } = await open(text, "Example"));
 		const retained = body;
 		root().querySelector(".callout-title-inner").click(); await pause();
@@ -87,6 +102,9 @@
 		({ title, body } = await open("> [!question]\n> body", "body"));
 		body.dispatch({ selection: { anchor: 0 } }); body.focus(); press(body, "ArrowUp"); await pause();
 		assert(title.hasFocus && title.state.doc.length === 0, "default title was not editable");
+		assert(!press(title, "Backspace") && !backwardInput(title), "backward deletion was not canceled in the empty title");
+		await pause();
+		assert(title.hasFocus && editor.getValue() === "> [!question]\n> body", "Backspace in the empty title changed focus or source");
 		title.dispatch({ changes: { from: 0, insert: "Custom" }, selection: { anchor: 6 } }); await pause();
 		assert(editor.getValue() === "> [!question] Custom\n> body", "adding a missing title did not insert the separator");
 		title.dispatch({ changes: { from: 0, to: 6, insert: "" } }); await pause();
