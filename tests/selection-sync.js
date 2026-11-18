@@ -21,11 +21,6 @@
 			editor.setCursor(editor.offsetToPos(text.indexOf(needle) + 2));
 			editor.focus();
 			await pause();
-			if (!root()) {
-				app.workspace.activeEditor = view;
-				app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"].editorCheckCallback(false, editor, view);
-				await pause();
-			}
 			assert(root()?.querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"), "embedded editor missing");
 			const child = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
 			child.focus();

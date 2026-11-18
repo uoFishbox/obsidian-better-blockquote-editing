@@ -13,32 +13,25 @@
 		await pause();
 		const view = leaf.view, editor = view.editor, cm = editor.cm;
 		const root = () => cm.dom.querySelector(".bbe-inline-editor");
-		const command = app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"];
-		const plugin = app.plugins.plugins["obsidian-better-blockquote-editing"];
+		const plugin = app.plugins.plugins["better-blockquote-editing"];
 		const mode = async source => { await view.setState({ ...view.getState(), mode: "source", source }, { history: false }); await pause(); };
 		const open = async () => {
 			editor.setCursor(editor.offsetToPos(editor.getValue().indexOf("body") + 2)); editor.focus();
 			await pause();
-			if (!root()) {
-				app.workspace.activeEditor = view;
-				assert(command.editorCheckCallback(false, editor, view), "Live Preview command unavailable");
-				await pause();
-			}
 			assert(root()?.querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"), "Live Preview editor did not mount");
 			const embedded = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
 			embedded.focus(); await pause(); return embedded;
 		};
 		editor.setValue(text);
 		editor.setCursor(editor.offsetToPos(text.indexOf("body") + 2)); editor.focus();
-		assert(!root() && !command.editorCheckCallback(true, editor, view) && !command.editorCheckCallback(false, editor, view) &&
-			plugin.getTarget(editor) === null, "Source mode allowed auto-open, command, or shared menu targeting");
+		assert(!root() && plugin.getTarget(editor) === null, "Source mode allowed inline editing");
 		assert(editor.getValue() === text && cm.state.selection.main.head === text.indexOf("body") + 2,
 			"Source mode changed the raw source or caret: " + JSON.stringify({text:editor.getValue(),selection:cm.state.selection.toJSON(),state:view.getState()}));
 		editor.replaceSelection("RAW ");
 		assert(!root() && editor.getValue().includes("> boRAW dy"), "Source mode did not retain normal Markdown editing");
 		await pause();
 		assert(!root(), "Source mode opened an editor after a source selection or edit");
-		passed.push("Source mode preserves raw Markdown editing and blocks automatic, command and menu entry points");
+		passed.push("Source mode preserves raw Markdown editing and keeps the inline editor closed");
 
 		editor.setValue(text); editor.setCursor(editor.offsetToPos(text.indexOf("body") + 2)); editor.focus();
 		await mode(false);
@@ -60,7 +53,6 @@
 		const nested = "> [!note] Outer\n> start\n>\n> > [!tip] Inner\n> > body\n>\n> end\n\noutside";
 		editor.setValue(nested); await pause();
 		editor.setCursor(editor.offsetToPos(nested.indexOf("start") + 2)); editor.focus(); await pause();
-		if (!root()) { app.workspace.activeEditor = view; command.editorCheckCallback(false, editor, view); await pause(); }
 		embedded = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
 		embedded.dispatch({ selection: { anchor: embedded.state.doc.toString().indexOf("body") } }); embedded.focus(); await pause();
 		for (let retry = 0; retry < 20 && !embedded.dom.querySelector(".bbe-inline-editor .bbe-editor-host > .markdown-source-view > .cm-editor"); retry++) await pause(50);

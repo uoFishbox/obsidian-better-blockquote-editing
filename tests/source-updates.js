@@ -20,11 +20,6 @@
 			await pause();
 			editor.setCursor(editor.offsetToPos(text.indexOf(needle) + 2)); editor.focus();
 			await pause();
-			if (!root()) {
-				app.workspace.activeEditor = view;
-				app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"].editorCheckCallback(false, editor, view);
-				await pause();
-			}
 			assert(root()?.querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"), "native editor did not mount: " + JSON.stringify({
 				text:editor.getValue(),selection:cm.state.selection.toJSON(),focus:cm.hasFocus,html:cm.contentDOM.innerHTML.slice(-700),
 				state:cm.state.values.filter(v=>v&&typeof v==="object"&&"widget" in v).map(v=>({from:v.from,to:v.to,valid:v.valid,conflict:v.conflict})),

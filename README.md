@@ -22,6 +22,12 @@ Supports Live Preview in Obsidian 1.14.4 and later.
 - Click another callout's content or title to sync your current edits and switch to it. If syncing is paused or an IME composition is in progress, the current editor stays open.
 - Ctrl+Backspace uses Obsidian's usual behavior by default. You can opt in to whole-block deletion in the plugin settings.
 
+### Upgrading from 0.2.2 or earlier with BRAT
+
+1. Back up `.obsidian/plugins/obsidian-better-blockquote-editing/data.json` if it exists.
+2. Disable the old plugin, remove its repository from BRAT, then add the same repository again and install 0.2.3 or later.
+3. With Obsidian closed, copy your backup to `.obsidian/plugins/better-blockquote-editing/data.json`. Reopen Obsidian and enable Better Blockquote Editing. If you want the new Ctrl+Backspace default, turn off whole-block deletion in the settings after restoring the file.
+
 ## Limitations
 
 - Source mode, Reading view, and blockquotes inside list items are not supported.

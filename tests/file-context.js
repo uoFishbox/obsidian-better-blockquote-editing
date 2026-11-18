@@ -32,7 +32,6 @@
 			editor.setCursor(editor.offsetToPos(editor.getValue().indexOf(needle)));
 			editor.focus();
 			app.workspace.activeEditor = view;
-			if (!root()) app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"].editorCheckCallback(false, editor, view);
 			await waitFor(() => root()?.querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"), "embedded editor did not mount");
 			const embedded = child();
 			embedded.focus();

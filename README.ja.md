@@ -21,6 +21,12 @@ Obsidian 1.14.4以降のLive Previewに対応しています。
 - 別のcalloutの本文・タイトルをクリックすると、編集中の内容を同期してから切り替わります。同期停止中やIME変換中は、現在の編集を維持します。
 - **Ctrl+Backspace** は既定で Obsidian 標準の動作になります。引用全体の削除はプラグイン設定で有効にできます。
 
+### BRAT で 0.2.2 以前から更新する場合
+
+1. `.obsidian/plugins/obsidian-better-blockquote-editing/data.json` がある場合はバックアップします。
+2. 旧プラグインを無効化して BRAT から登録を削除し、同じリポジトリを登録し直して 0.2.3 以降をインストールします。
+3. Obsidian を終了し、バックアップを `.obsidian/plugins/better-blockquote-editing/data.json` にコピーします。Obsidian を再起動して Better Blockquote Editing を有効にします。引き継ぎ後に Ctrl+Backspace を新しい既定動作へ戻したい場合は、プラグイン設定で引用全体の削除をオフにします。
+
 ## 注意点
 
 - Source mode、Reading view、リスト項目内の引用は対象外です。

@@ -2,7 +2,7 @@
 (async () => {
 	const pause = (ms = 180) => new Promise(resolve => setTimeout(resolve, ms));
 	const assert = (ok, message) => { if (!ok) throw new Error(message); };
-	const id = "obsidian-better-blockquote-editing";
+	const id = "better-blockquote-editing";
 	const plugin = () => app.plugins.plugins[id];
 	const originalData = await plugin().loadData();
 	const originalSettings = { ...plugin().settings };

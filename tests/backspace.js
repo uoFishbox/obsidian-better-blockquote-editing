@@ -3,7 +3,7 @@
 	const pause = (ms = 180) => new Promise(resolve => setTimeout(resolve, ms));
 	const assert = (ok, message) => { if (!ok) throw new Error(message); };
 	const originalLeaf = app.workspace.activeLeaf;
-	const settings = app.plugins.plugins["obsidian-better-blockquote-editing"].settings;
+	const settings = app.plugins.plugins["better-blockquote-editing"].settings;
 	const originalBehavior = settings.backspaceBehavior;
 	const file = await app.vault.create(`bbe-backspace-${Date.now()}.md`, "");
 	const leaf = app.workspace.getLeaf("tab");

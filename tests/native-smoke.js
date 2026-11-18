@@ -35,7 +35,7 @@
 			// Windows can deny foreground activation by background CLI processes.
 			app.workspace.activeEditor = view;
 			assert(root(), "inline editor missing: " + JSON.stringify({passed, cursor:editor.getCursor(),
-				text:editor.getValue().slice(0,200),target:!!app.plugins.plugins["obsidian-better-blockquote-editing"].getTarget(editor),
+				text:editor.getValue().slice(0,200),target:!!app.plugins.plugins["better-blockquote-editing"].getTarget(editor),
 				state:cm.state.values.filter(value=>value&&typeof value==="object"&&"widget" in value)
 					.map(value=>({from:value.from,to:value.to,conflict:value.conflict})),html:cm.contentDOM.outerHTML.slice(-1200)}));
 			assert(child() !== cm, "native editor must have its own CM instance");

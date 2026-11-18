@@ -22,10 +22,6 @@
 			cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: text }, selection: { anchor: 0 } });
 			await pause();
 			editor.setCursor(editor.offsetToPos(text.indexOf(needle))); editor.focus(); await pause(250);
-			if (!root()) {
-				app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"].editorCheckCallback(false, editor, view);
-				await pause(250);
-			}
 			assert(icon(), "callout icon missing");
 			return cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
 		};

@@ -24,10 +24,6 @@
 			await pause();
 			editor.setCursor(editor.offsetToPos(value.indexOf(needle) + 2)); editor.focus();
 			await pause(250);
-			if (!root()) {
-				app.commands.commands["obsidian-better-blockquote-editing:edit-quote-inline"].editorCheckCallback(false, editor, view);
-				await pause(250);
-			}
 			assert(root()?.querySelector(".bbe-title-host .cm-editor"), "title editor missing");
 			return { title: child(".bbe-title-host .cm-editor"), body: child(".bbe-editor-host > .markdown-source-view > .cm-editor") };
 		};
