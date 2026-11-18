@@ -23,9 +23,8 @@ Obsidian 1.14.4以降のLive Previewに対応しています。
 
 ### BRAT で 0.2.2 以前から更新する場合
 
-1. `.obsidian/plugins/obsidian-better-blockquote-editing/data.json` がある場合はバックアップします。
-2. 旧プラグインを無効化して BRAT から登録を削除し、同じリポジトリを登録し直して 0.2.3 以降をインストールします。
-3. Obsidian を終了し、バックアップを `.obsidian/plugins/better-blockquote-editing/data.json` にコピーします。Obsidian を再起動して Better Blockquote Editing を有効にします。引き継ぎ後に Ctrl+Backspace を新しい既定動作へ戻したい場合は、プラグイン設定で引用全体の削除をオフにします。
+1. 旧プラグインを無効化し、BRAT からリポジトリの登録を削除します。
+2. 同じリポジトリを登録し直し、0.2.3 以降をインストールして Better Blockquote Editing を有効にします。
 
 ## 注意点
 

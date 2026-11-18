@@ -24,9 +24,8 @@ Supports Live Preview in Obsidian 1.14.4 and later.
 
 ### Upgrading from 0.2.2 or earlier with BRAT
 
-1. Back up `.obsidian/plugins/obsidian-better-blockquote-editing/data.json` if it exists.
-2. Disable the old plugin, remove its repository from BRAT, then add the same repository again and install 0.2.3 or later.
-3. With Obsidian closed, copy your backup to `.obsidian/plugins/better-blockquote-editing/data.json`. Reopen Obsidian and enable Better Blockquote Editing. If you want the new Ctrl+Backspace default, turn off whole-block deletion in the settings after restoring the file.
+1. Disable the old plugin and remove its repository from BRAT.
+2. Add the same repository again, install 0.2.3 or later, and enable Better Blockquote Editing.
 
 ## Limitations
 
