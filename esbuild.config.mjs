@@ -28,6 +28,14 @@ const adaptEditorDependencies = {
 			if (/globalThis\.process|ensureBrowserProcess/.test(contents)) {
 				throw new Error(`Unexpected process shim in ${path}`);
 			}
+			if (/[\\/]embeddable-markdown-editor-component\.mjs$/.test(path)) {
+				// Keep the host pane from stealing focus. A background window can
+				// retain a focused element, so its editor must never block another pane.
+				const guard = /patchHandler: \(\{ fallback \}\) => \{\r?\n\s+if \(isEditorViewFocusedInItsWindow\(scrollableEditor\.activeCM\)\) \{/;
+				if (!guard.test(contents)) throw new Error(`Unexpected editor focus guard in ${path}`);
+				contents = contents.replace(guard, `patchHandler: ({ fallback, originalArguments: [leaf] }) => {
+        if (leaf?.view?.containerEl?.contains(this.containerEl) && isEditorViewFocusedInItsWindow(scrollableEditor.activeCM)) {`);
+			}
 			if (contents !== original) return { contents, watchFiles: [path] };
 		});
 	},

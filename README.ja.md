@@ -43,4 +43,7 @@ Obsidian CLIが使える環境では、プラグインを有効にして実機�
 
 ```sh
 npm run test:obsidian -- <vault-name>
+npm run test:obsidian -- <vault-name> ./pane-focus.js
 ```
+
+リリース前に `manifest.json` の対応下限と最新安定版の両方で、上記の実機テストを実行してください。フォーカスのテストは、テスト用保管庫で分割ペインと別ウィンドウを開きます。

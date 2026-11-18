@@ -44,4 +44,7 @@ If the Obsidian CLI is available, enable the plugin and run the tests inside Obs
 
 ```sh
 npm run test:obsidian -- <vault-name>
+npm run test:obsidian -- <vault-name> ./pane-focus.js
 ```
+
+Before releasing, run both tests on the minimum version in `manifest.json` and the latest stable version. The focus test opens a split pane and a pop-out window in the test vault.
