@@ -168,3 +168,7 @@
 	font-size: var(--font-ui-smaller);
 	color: var(--text-error);
 }
+
+.bbe-draft-recovery textarea {
+	width: 100%;
+}

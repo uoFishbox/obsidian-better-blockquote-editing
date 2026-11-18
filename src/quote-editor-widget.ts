@@ -630,7 +630,6 @@ export class QuoteEditorWidget extends WidgetType {
 				const text = modal.contentEl.createEl("textarea", { attr: { readonly: "", "aria-label": "未反映の編集内容" } });
 				text.value = drafts.join("\n\n---\n\n");
 				text.rows = 12;
-				text.style.width = "100%";
 				modal.open();
 			} else if (focused) this.parent.focus();
 		});
