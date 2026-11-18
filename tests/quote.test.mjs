@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { Text } from "@codemirror/state";
 import { build } from "esbuild";
 
 const bundle = await build({ entryPoints: ["src/quote.ts"], bundle: true,
@@ -7,6 +8,19 @@ const bundle = await build({ entryPoints: ["src/quote.ts"], bundle: true,
 const { bodyOffsetToSource, calloutTitle, findQuote, serializeQuote, sourceOffsetToBody, titleOffsetToSource } = await import(
 	`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`,
 );
+
+test("quote lookup reuses the parse across cursor moves and refreshes it for edits", () => {
+	const doc = Text.of(["before", "", "> body"]);
+	const toString = doc.toString.bind(doc);
+	let reads = 0;
+	doc.toString = () => { reads++; return toString(); };
+	assert.equal(findQuote(doc, 2), null);
+	assert.equal(findQuote(doc, 11).cursor, 1);
+	assert.equal(findQuote(doc, 13).cursor, 3);
+	assert.equal(reads, 1);
+	assert.equal(findQuote(doc.replace(8, 9, Text.of(["x"])), 11), null);
+	assert.equal(findQuote(doc, 11).body, "body");
+});
 
 test("title edits preserve the complete body, quote prefixes, metadata and folding", () => {
 	for (const source of [

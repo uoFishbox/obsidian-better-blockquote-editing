@@ -53,9 +53,14 @@ export const editingField = StateField.define<EditingState | null>({
 		if (touched) {
 			const start = transaction.changes.mapPos(current.from, -1);
 			const end = transaction.changes.mapPos(current.to, 1);
-			const doc = transaction.newDoc.toString();
-			const quote = [from, start, Math.max(start, end - 1)].map(at => findQuote(doc, at, true))
-				.find(block => block && block.from <= end && block.to >= start);
+			let quote;
+			for (const at of [from, start, Math.max(start, end - 1)]) {
+				const block = findQuote(transaction.newDoc, at, true);
+				if (block && block.from <= end && block.to >= start) {
+					quote = block;
+					break;
+				}
+			}
 			valid = !!quote;
 			from = quote?.from ?? start;
 			to = quote?.to ?? from;

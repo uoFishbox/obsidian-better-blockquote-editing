@@ -482,7 +482,7 @@ export class QuoteEditorWidget extends WidgetType {
 		const source = this.parent.state.sliceDoc(current.from, current.to);
 		const changed = source !== this.lastSource;
 		// Markdown's syntax node starts at >, after any indentation on the first line.
-		const quote = changed ? findQuote(this.parent.state.doc.toString(), current.from + Math.max(0, source.indexOf(">")), true) : this.quote;
+		const quote = changed ? findQuote(this.parent.state.doc, current.from + Math.max(0, source.indexOf(">")), true) : this.quote;
 		if (!quote) return false;
 		const remoteTitle = changed ? calloutTitle(quote.header).text : this.syncedTitle;
 		const bodyMerge = mergePendingText(this.syncedBody, this.body, this.pendingChanges, changed ? quote.body : this.syncedBody);

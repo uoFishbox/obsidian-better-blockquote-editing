@@ -1,3 +1,4 @@
+import type { Text } from "@codemirror/state";
 import { parser } from "@lezer/markdown";
 
 export interface QuoteBlock {
@@ -41,12 +42,29 @@ function stripPrefix(line: string, depth: number): { text: string; length: numbe
 	return { text: line.slice(length), length };
 }
 
-/** Find an actual Markdown blockquote, never a > inside a code fence. */
-export function findQuote(text: string, cursor: number, outermost = false): QuoteBlock | null {
+function parseDocument(text: string) {
 	const frontmatter = /^(?:\uFEFF)?---\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)(?:\r?\n|$)/.exec(text);
-	if (frontmatter && cursor < frontmatter[0].length) return null;
+	return { text, frontmatterEnd: frontmatter?.[0].length ?? 0, tree: parser.parse(text) };
+}
+
+// CodeMirror reuses immutable Text objects for selection-only updates.
+const parsedDocuments = new WeakMap<Text, ReturnType<typeof parseDocument>>();
+
+function parsedDocument(doc: Text) {
+	let parsed = parsedDocuments.get(doc);
+	if (!parsed) {
+		parsed = parseDocument(doc.toString());
+		parsedDocuments.set(doc, parsed);
+	}
+	return parsed;
+}
+
+/** Find an actual Markdown blockquote, never a > inside a code fence. */
+export function findQuote(doc: Text | string, cursor: number, outermost = false): QuoteBlock | null {
+	const { text, frontmatterEnd, tree } = typeof doc === "string" ? parseDocument(doc) : parsedDocument(doc);
+	if (cursor < frontmatterEnd) return null;
 	let range: { from: number; to: number; depth: number } | null = null;
-	parser.parse(text).iterate({
+	tree.iterate({
 		enter(node) {
 			if (node.from > cursor || node.to < cursor) return false;
 			if (node.name !== "Blockquote") return;

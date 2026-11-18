@@ -19,7 +19,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 			view.root.activeElement !== view.contentDOM) return false;
 		const line = state.doc.lineAt(main.head);
 		if (line.number === 1 || main.head !== line.from) return false;
-		const quote = findQuote(state.doc.toString(), main.head - 1, true);
+		const quote = findQuote(state.doc, main.head - 1, true);
 		if (!quote || quote.to !== main.head - 1) return false;
 		if (settings.backspaceBehavior === "edit" && !deleteBlock) {
 			quote.cursor = quote.body.length;
@@ -45,7 +45,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 			const { main, ranges } = view.state.selection;
 			if (!view.hasFocus || view.state.readOnly || view.compositionStarted || ranges.length !== 1 ||
 				view.state.field(editorLivePreviewField, false) !== true) return false;
-			const quote = findQuote(view.state.doc.toString(), main.empty ? main.head : main.to - 1, true);
+			const quote = findQuote(view.state.doc, main.empty ? main.head : main.to - 1, true);
 			return !!quote && (main.empty || !!quote.header && main.head === quote.from && main.anchor === quote.to);
 		}),
 		Prec.highest(keymap.of([
@@ -76,7 +76,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					insertedSelection = undefined;
 					const head = selection.head;
 					if (editing && selection.from >= editing.from && selection.to <= editing.to) return;
-					const quote = findQuote(view.state.doc.toString(), selection.empty ? head : selection.to - 1, true);
+					const quote = findQuote(view.state.doc, selection.empty ? head : selection.to - 1, true);
 					if (editing && (!quote || quote.from === editing.from)) {
 						if (selection.empty && (head < editing.from || head > editing.to)) {
 							editing.widget.finish(head < editing.from ? -1 : 1, true);
@@ -127,9 +127,9 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 			};
 			const openTypeModal = (block: HTMLElement, icon: Element) => {
 				if (typeModal) return;
-				const source = view.state.doc.toString();
+				const doc = view.state.doc;
 				const firstLine = view.state.doc.lineAt(view.posAtDOM(block));
-				const outer = findQuote(source, firstLine.from + Math.max(0, firstLine.text.indexOf("[!")), true);
+				const outer = findQuote(doc, firstLine.from + Math.max(0, firstLine.text.indexOf("[!")), true);
 				if (!outer) return;
 				// Native nested callouts share one CM widget and therefore one DOM position.
 				// Match their rendered order to actual Markdown callout headers, skipping code.
@@ -140,7 +140,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					const header = /^(?: {0,3}>[ \t]?)+\[!/.exec(line[0]);
 					if (!header) continue;
 					const from = outer.from + line.index!;
-					const quote = findQuote(source, from + header[0].length);
+					const quote = findQuote(doc, from + header[0].length);
 					if (quote?.header && quote.from === from) quotes.push(quote);
 				}
 				const quote = quotes[index];
@@ -153,7 +153,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					if (!typeTarget || disposed || view.compositionStarted || view.state.field(editorLivePreviewField, false) !== true) return;
 					const line = view.state.doc.lineAt(typeTarget.from);
 					const at = line.from + Math.max(0, line.text.indexOf("[!"));
-					const current = findQuote(view.state.doc.toString(), at);
+					const current = findQuote(view.state.doc, at);
 					if (current?.header && current.from === typeTarget.from && current.to === typeTarget.to) {
 						changeCalloutType(view, current.from, next);
 					}
@@ -180,7 +180,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					event.stopImmediatePropagation();
 					return;
 				}
-				const quote = findQuote(view.state.doc.toString(), view.posAtDOM(target.block), true);
+				const quote = findQuote(view.state.doc, view.posAtDOM(target.block), true);
 				if (quote) pointerTarget = { from: quote.from, title: target.title,
 					position: target.editButton ? undefined : quoteClickPosition(event, target.block) };
 			};
@@ -204,7 +204,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 					openTypeModal(target.block, target.typeIcon);
 					return;
 				}
-				const quote = findQuote(view.state.doc.toString(), view.posAtDOM(target.block), true);
+				const quote = findQuote(view.state.doc, view.posAtDOM(target.block), true);
 				if (!quote) return;
 				const selection = view.state.selection;
 				const editing = view.state.field(editingField, false);
@@ -233,7 +233,7 @@ export function createInlineEditorExtension(app: App, settings: BetterBlockquote
 						insertedSelection = undefined;
 						const selection = update.state.selection.main;
 						if (update.state.selection.ranges.length === 1 && !selection.empty) {
-							const quote = findQuote(update.state.doc.toString(), selection.from, true);
+							const quote = findQuote(update.state.doc, selection.from, true);
 							const type = quote?.header && /^\[!([^|\]]+)/.exec(quote.header);
 							if (quote && type) {
 								const from = quote.from + quote.source.indexOf("[!");
@@ -298,7 +298,7 @@ export function openInlineEditor(app: App, view: EditorView, quote: QuoteBlock, 
 		// Flushing the old editor (including nested drafts) may move the target.
 		const source = view.state.doc.toString();
 		const at = textChanges(before, source).mapPos(quote.from + Math.max(0, quote.source.indexOf(">")), 1);
-		const current = findQuote(source, at, true);
+		const current = findQuote(view.state.doc, at, true);
 		if (!current) return;
 		current.cursor = Math.min(quote.cursor, current.body.length);
 		current.titleCursor = quote.titleCursor === null ? null : Math.min(quote.titleCursor, calloutTitle(current.header).text.length);
