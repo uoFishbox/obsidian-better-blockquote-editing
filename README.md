@@ -20,6 +20,7 @@ Supports Live Preview in Obsidian 1.14.4 and later.
 - Click the icon in the upper-left corner of a callout to open the type picker. Search built-in types and aliases, or enter a custom type name.
 - Use the arrow keys to move between the content and title or out of the block. Press **Enter** in the title to move to the content.
 - Click another callout's content or title to sync your current edits and switch to it. If syncing is paused or an IME composition is in progress, the current editor stays open.
+- Ctrl+Backspace uses Obsidian's usual behavior by default. You can opt in to whole-block deletion in the plugin settings.
 
 ## Limitations
 

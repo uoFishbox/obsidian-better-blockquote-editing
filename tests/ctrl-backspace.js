@@ -20,7 +20,7 @@
 			key: "Backspace", code: "Backspace", ctrlKey: true, bubbles: true, cancelable: true, ...options,
 		}));
 		const tab = () => app.setting.pluginTabs.find(tab => tab.id === id);
-		const toggle = () => tab().containerEl.querySelector("input[type=checkbox]");
+		const toggle = () => tab().containerEl.querySelector(".checkbox-container");
 		const mode = async value => {
 			tab().display();
 			const dropdown = tab().containerEl.querySelector("select");
@@ -31,7 +31,10 @@
 		const setToggle = async enabled => {
 			assert(toggle(), "Ctrl+Backspace toggle missing in edit mode");
 			if (plugin().settings.ctrlBackspaceDeletesBlock !== enabled) {
-				toggle().dispatchEvent(new Event("change", { bubbles: true }));
+				const input = toggle().querySelector("input");
+				assert(input, "Ctrl+Backspace input missing");
+				input.checked = enabled;
+				input.dispatchEvent(new Event("change", { bubbles: true }));
 			}
 			await pause();
 			assert(plugin().settings.ctrlBackspaceDeletesBlock === enabled &&
@@ -70,8 +73,8 @@
 			const text = await load(block); press(cm, { ctrlKey: false }); await pause(350);
 			assert(root() && cm.state.doc.toString() === text, "the toggle changed ordinary Backspace behavior");
 			const embedded = cm.constructor.findFromDOM(root().querySelector(".bbe-editor-host > .markdown-source-view > .cm-editor"));
-			for (let retry = 0; retry < 30 && !embedded.hasFocus; retry++) await pause(50);
-			assert(embedded.hasFocus && embedded.state.selection.main.head === embedded.state.doc.length, "ordinary Backspace did not focus the body end: " + JSON.stringify({ block, focus: embedded.hasFocus, selection: embedded.state.selection.toJSON(), body: embedded.state.doc.toString(), active: document.activeElement?.className, parentFocus: cm.hasFocus, activeInsideRoot: root().contains(document.activeElement), windowFocus: document.hasFocus(), editorCount: root().querySelectorAll(".bbe-editor-host > .markdown-source-view > .cm-editor").length }));
+			assert(embedded.root.activeElement === embedded.contentDOM &&
+				embedded.state.selection.main.head === embedded.state.doc.length, "ordinary Backspace did not focus the body end");
 			press(embedded); await pause();
 			assert(root() && cm.state.doc.toString().includes(">"), "Ctrl+Backspace inside the body deleted its enclosing block");
 		}
