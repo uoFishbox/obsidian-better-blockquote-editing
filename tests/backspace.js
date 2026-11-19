@@ -97,6 +97,15 @@
 		press(body, "Backspace"); await pause();
 		assert(cm.state.doc.toString() === callout.replace("body", "ody"), "Backspace did not delete selected body text");
 		passed.push("Backspace and beforeinput are canceled at the callout body start while selected text can still be deleted");
+		const start = body.domAtPos(0), end = body.domAtPos(body.state.doc.length);
+		body.contentDOM.ownerDocument.getSelection().setBaseAndExtent(start.node, start.offset, end.node, end.offset);
+		assert(body.state.selection.main.empty && body.state.selection.main.head === 0,
+			"CodeMirror already received the native range selection");
+		assert(backwardInput(), "beforeinput canceled a native range selection before CodeMirror received it");
+		press(body, "Backspace"); await pause();
+		assert(body.state.doc.length === 0 && cm.state.doc.toString() === "before\n\n> [!note] Title\n\nafter",
+			"Backspace did not delete the native range selection while preserving the callout and surrounding text");
+		passed.push("a native range selected just before Backspace can delete the whole body without touching the callout header");
 		await close();
 		await view.setState({ ...view.getState(), mode: "source", source: true }, { history: false }); await pause();
 		await load(text, anchor);

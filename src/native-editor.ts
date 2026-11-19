@@ -1,15 +1,42 @@
+import { selectAll } from "@codemirror/commands";
 import { Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { EmbeddableMarkdownEditorComponent } from "@mnaoumov/obsidian-lib/components/embeddable-markdown-editor-component";
-import type { TFile } from "obsidian";
+import { Platform, type TFile } from "obsidian";
 import { editingField, sourceUpdate, type ExitDirection } from "./editing-state";
+
+const scopeNativeSelectAll = ViewPlugin.define(view => {
+	const content = view.contentDOM;
+	const { ownerDocument } = content;
+	const ownerWindow = ownerDocument.defaultView!;
+	const onSelectStart = (event: Event) => {
+		const target = event.target;
+		// WebKit sends Select All's selectstart to the outermost editable ancestor.
+		if (!event.cancelable || event.defaultPrevented || view.root.activeElement !== content ||
+			!(target instanceof ownerWindow.HTMLElement) || target === content ||
+			!target.classList.contains("cm-content") || !target.isContentEditable || !target.contains(content)) return;
+		event.preventDefault();
+		if (!view.compositionStarted) selectAll(view);
+	};
+	ownerDocument.addEventListener("selectstart", onSelectStart, true);
+	return {
+		destroy() {
+			ownerDocument.removeEventListener("selectstart", onSelectStart, true);
+		},
+	};
+});
 
 const preventBackspaceAtStart = ViewPlugin.define(view => {
 	const content = view.contentDOM;
 	const preventAtStart = (event: KeyboardEvent | InputEvent) => {
 		const { main, ranges } = view.state.selection;
-		if (!event.isComposing && !view.compositionStarted && view.root.activeElement === content &&
-			ranges.length === 1 && main.empty && main.head === 0) event.preventDefault();
+		if (event.isComposing || view.compositionStarted || view.root.activeElement !== content ||
+			ranges.length !== 1 || !main.empty || main.head !== 0) return;
+		// iOS selection handles can update the DOM range before CodeMirror sees it.
+		const selection = content.ownerDocument.getSelection();
+		if (selection && !selection.isCollapsed &&
+			content.contains(selection.anchorNode) && content.contains(selection.focusNode)) return;
+		event.preventDefault();
 	};
 	const onKeyDown = (event: KeyboardEvent) => {
 		if (event.key === "Backspace" && !event.ctrlKey && !event.altKey && !event.metaKey) preventAtStart(event);
@@ -58,6 +85,7 @@ export class NativeQuoteEditor extends EmbeddableMarkdownEditorComponent {
 
 	protected buildExtensions(): Extension[] {
 		return [...super.buildExtensions(), this.inlineExtension, preventBackspaceAtStart,
+			...(Platform.isIosApp ? [scopeNativeSelectAll] : []),
 			Prec.highest(keymap.of([
 				{ key: "ArrowUp", run: (view) => this.exitAtEdge(view, -1, true) },
 				{ key: "ArrowDown", run: (view) => this.exitAtEdge(view, 1, true) },
